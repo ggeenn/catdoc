@@ -25,72 +25,72 @@ static int runtime_locale_check=1;
 /*  Reads configuration file                                        */
 /*                                                                  */
 /********************************************************************/
-void read_config_file(const char* filename) { 
-	FILE *f=fopen(add_exe_path(filename),"rb");
-	char *name,*value,line[1024],*c;
-	int lineno=0;
-	if (!f) return;
-	while (!feof(f)) {
-		fgets(line,1024,f);
-		if (feof(f)) break;
-		lineno++;
-		if ((c=strchr(line,'#'))) *c='\0';
-		name=line;
-		while (*name&&isspace(*name)) name++;
-		if (!*name) continue;
-		for (value=name;*value&&(isalnum(*value)||*value=='_'); value++);  
-		if (*value=='=') {
-			*value=0;value++;
-		} else {
-			*value=0;value++;
-			while(*value&&isspace(*value)) value++;
-			if (*value++ != '=' ) {
-				fprintf(stderr,"Error %s(%d): name = value syntax expected\n",
-						filename,lineno);
-				exit(1);
-			}
-			while(*value&&isspace(*value)) value++;
-		}
-		for (c=value;*c&&!isspace(*c);c++);
-		if (value==c) {
-			fprintf(stderr,"Error %s(%d): name = value syntax expected\n",
-					filename,lineno);
-			exit(1);
-		}
-		*c=0;
-		if (!strcmp(name,"source_charset")) {
-			source_csname=strdup(value);
-		} else if (!strcmp(name,"target_charset")) {
-			dest_csname=strdup(value);
-		} else if (!strcmp(name,"format")) {
-			format_name=strdup(value);
-		} else if (!strcmp(name,"charset_path")) {
-			charset_path=strdup(value);
-		} else if (!strcmp(name,"map_path")) {
-			map_path = strdup(value);
-		} else if (!strcmp(name,"unknown_char")) {
-			if (*value=='"' && value[1] && value[2]=='"') value++;	
-			if (*value=='\'' && value[1] && value[2]=='\'') value++;	
-			bad_char[0] = *value;
-		} else if (!strcmp(name,"use_locale")) {
-			if (tolower(value[0])=='n') {
-				runtime_locale_check=0;
-			} else if (tolower(value[0])=='y') {
-				runtime_locale_check=1;
-			} else {
-				fprintf(stderr,"Error %s(%d): use_locale requires 'yes' or 'no'\n",
-						filename,lineno);
-				exit(1);
-			}	
-
-		} else {
-			fprintf(stderr,"Invalid configuration directive in %s(%d):,%s = %s\n",
-					filename,lineno,name,value);		
-			exit(1);
-		}	
-	}
-	fclose(f);
-}
+//void read_config_file(const char* filename) { 
+//	FILE *f=fopen(add_exe_path(filename),"rb");
+//	char *name,*value,line[1024],*c;
+//	int lineno=0;
+//	if (!f) return;
+//	while (!feof(f)) {
+//		fgets(line,1024,f);
+//		if (feof(f)) break;
+//		lineno++;
+//		if ((c=strchr(line,'#'))) *c='\0';
+//		name=line;
+//		while (*name&&isspace(*name)) name++;
+//		if (!*name) continue;
+//		for (value=name;*value&&(isalnum(*value)||*value=='_'); value++);  
+//		if (*value=='=') {
+//			*value=0;value++;
+//		} else {
+//			*value=0;value++;
+//			while(*value&&isspace(*value)) value++;
+//			if (*value++ != '=' ) {
+//				fprintf(stderr,"Error %s(%d): name = value syntax expected\n",
+//						filename,lineno);
+//				exit(1);
+//			}
+//			while(*value&&isspace(*value)) value++;
+//		}
+//		for (c=value;*c&&!isspace(*c);c++);
+//		if (value==c) {
+//			fprintf(stderr,"Error %s(%d): name = value syntax expected\n",
+//					filename,lineno);
+//			exit(1);
+//		}
+//		*c=0;
+//		if (!strcmp(name,"source_charset")) {
+//			source_csname=strdup(value);
+//		} else if (!strcmp(name,"target_charset")) {
+//			dest_csname=strdup(value);
+//		} else if (!strcmp(name,"format")) {
+//			format_name=strdup(value);
+//		} else if (!strcmp(name,"charset_path")) {
+//			charset_path=strdup(value);
+//		} else if (!strcmp(name,"map_path")) {
+//			map_path = strdup(value);
+//		} else if (!strcmp(name,"unknown_char")) {
+//			if (*value=='"' && value[1] && value[2]=='"') value++;	
+//			if (*value=='\'' && value[1] && value[2]=='\'') value++;	
+//			bad_char[0] = *value;
+//		} else if (!strcmp(name,"use_locale")) {
+//			if (tolower(value[0])=='n') {
+//				runtime_locale_check=0;
+//			} else if (tolower(value[0])=='y') {
+//				runtime_locale_check=1;
+//			} else {
+//				fprintf(stderr,"Error %s(%d): use_locale requires 'yes' or 'no'\n",
+//						filename,lineno);
+//				exit(1);
+//			}	
+//
+//		} else {
+//			fprintf(stderr,"Invalid configuration directive in %s(%d):,%s = %s\n",
+//					filename,lineno,name,value);		
+//			exit(1);
+//		}	
+//	}
+//	fclose(f);
+//}
 #ifdef HAVE_LANGINFO
 static char *locale_charset = NULL;
 /*********************************************************************/

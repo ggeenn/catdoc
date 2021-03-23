@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "catdoc.h"
-char ole_sign[]={0xD0,0xCF,0x11,0xE0,0xA1,0xB1,0x1A,0xE1,0};
+extern char ole_sign[], zip_sign[]; /* from ole.c */
 char rtf_sign[]="{\\rtf";
 char old_word_sign[]={0xdb,0xa5,0};
 char write_sign[]={0x31,0xBE,0};
@@ -23,7 +23,7 @@ int verbose=0;
  * it is word processor file or copy_out if it is plain text file
  * return not 0 when error
  ********************************************************************/ 
-int analyze_format(FILE *f) {
+int analyze_format(FILE *f, char* filename) {
 	unsigned char buffer[129];
 	long offset=0;
 	FILE *new_file, *ole_file;
@@ -39,18 +39,22 @@ int analyze_format(FILE *f) {
 	}
 	catdoc_read(buffer,4,1,f);
 	buffer[4]=0;
-	if (strncmp(buffer,write_sign,2)==0) {
+	if (strncmp((char *)&buffer,write_sign,2)==0) {
 		printf("[Windows Write file. Some garbage expected]\n");
 		get_unicode_char=get_8bit_char;
 		return process_file(f,LONG_MAX);
-	} else if (strncmp(buffer,rtf_sign,4)==0) {
+	} else if (strncmp((char *)&buffer,rtf_sign,4)==0) {
 		return parse_rtf(f);
-	} else if (strncmp(buffer,old_word_sign,2)==0) {
+	} else if (strncmp((char *)&buffer, zip_sign,4) == 0) {
+		fprintf(stderr,"This file looks like ZIP archive or Office 2007 "
+		"or later file.\nNot supported by catdoc\n");
+		exit(1);
+	} else if (strncmp((char *)&buffer,old_word_sign,2)==0) {
 	   fread(buffer+4,1,124,f);	
 	   return parse_word_header(buffer,f,128,0);
 	}	
 	fread(buffer+4,1,4,f);
-	if (strncmp(buffer,ole_sign,8)==0) {
+	if (strncmp((char *)&buffer,ole_sign,8)==0) {
 		if ((new_file=ole_init(f, buffer, 8)) != NULL) {
 			set_ole_func();
 			while((ole_file=ole_readdir(new_file)) != NULL) {
@@ -60,18 +64,25 @@ int analyze_format(FILE *f) {
 						offset=catdoc_read(buffer, 1, 128, ole_file);
 						ret_code=parse_word_header(buffer,ole_file,-offset,offset);
 					}
+					if (strcasecmp(((oleEntry*)ole_file)->name , "Workbook") == 0
+						|| strcasecmp(((oleEntry*)ole_file)->name,"Book") == 0) {
+						do_table(ole_file,filename);
+					}
+					if (strcasecmp(((oleEntry*)ole_file)->name , "PowerPoint Document") == 0) {
+						do_ppt(ole_file,filename);
+					}
 				} 
 				ole_close(ole_file);
 			}
 			set_std_func();
 			ole_finish();
 		} else {
-			fprintf(stderr,"Broken OLE file. Try using -b switch");
+			fprintf(stderr,"Broken OLE file. Try using -b switch\n");
 			exit(1);
 		}	
 	} else {
-		set_std_func();
-		copy_out(f,buffer);
+
+		copy_out(f,(char *)&buffer);
 		return 0;
 	}
 	

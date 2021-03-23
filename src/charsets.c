@@ -14,7 +14,7 @@
 
 char *charset_path=CHARSETPATH;
 char *source_csname=SOURCE_CHARSET, *dest_csname=TARGET_CHARSET;
-short int * source_charset;
+uint16_t * source_charset;
 int unknown_as_hex=0;
 char bad_char[]=UNKNOWN_CHAR;
 CHARSET target_charset;
@@ -22,7 +22,7 @@ CHARSET target_charset;
 /* Converts char in input charset into unicode representation           */
 /* Should be converted to macro                                         */
 /************************************************************************/
-int to_unicode (short int *charset, int c) {
+int to_unicode (uint16_t *charset, int c) {
 	return charset[c];
 }
 /************************************************************************/
@@ -46,13 +46,14 @@ CHARSET make_reverse_map(short int *charset) {
 	int i,j,k,l;
 	short int *p;   
 	if (! charset) {
+		free(newmap);
 		return NULL;
 	}	
 	for (i=0;i<256;i++) {
 		k= charset[i];
 		j=  (unsigned)k>>8;
 		if (!newmap[j]) {
-			newmap[j] = malloc(sizeof(short int *)*256);
+			newmap[j] = (short int *)malloc(sizeof(short int)*256);
 			if (!newmap[j]) {
 				fprintf(stderr,"Insufficient memory for  charset\n");
 				exit(1);
@@ -69,10 +70,10 @@ CHARSET make_reverse_map(short int *charset) {
 /* Reads charset file (as got from ftp.unicode.org) and returns array of*/
 /* 256 short ints (malloced) mapping from charset t unicode             */
 /************************************************************************/
-short int * read_charset(const char *filename) {
+uint16_t * read_charset(const char *filename) {
 	char *path;
 	FILE *f;
-	short int *new=calloc(sizeof(short int),256);
+	uint16_t *new;
 	int c;
 	long int uc;
 	path= find_file(stradd(filename,CHARSET_EXT),charset_path);
@@ -89,6 +90,7 @@ short int * read_charset(const char *filename) {
 	if (input_buffer)
 		setvbuf(f,input_buffer,_IOFBF,FILE_BUFFER);
 	/* defaults */
+	new = calloc(sizeof(short int),256);
 	for (c=0;c<32;c++) {
 		new[c]=c;
 	}
@@ -97,6 +99,7 @@ short int * read_charset(const char *filename) {
 			if (c<0||c>255||uc<0||(uc>0xFEFE&& uc!=0xFFFE)) {
 				fprintf(stderr,"Invalid charset file %s\n",path);
 				fclose(f);
+				free(new);
 				return NULL;
 			}
 			new[c]=uc;
@@ -163,7 +166,7 @@ int get_utf16msb (FILE *f,long *offset,long fileend) {
 
 int get_utf8 (FILE *f,long *offset,long fileend) {
 	unsigned char buf[3];
-	int d,c;
+	int c;
     int result;
 	result=catdoc_read(buf, 1, 1, f);
 	if (result<0) {
@@ -172,14 +175,13 @@ int get_utf8 (FILE *f,long *offset,long fileend) {
 	}	
 	if (result==0) return EOF;
 	c=buf[0];
-	d=0;
 	if (c<0x80) 
 		return c;
 	if (c <0xC0) 
 		return 0xfeff; /*skip corrupted sequebces*/
 	if (c <0xE0) {
 		if (catdoc_read(buf+1, 1, 1, f)<=0) return EOF;
-		return ((c & 0x1F)<<6 | ((char)buf[1] & 0x3F));
+		return (((c & 0x1F)<<6) | ((char)buf[1] & 0x3F));
 	}
 	if (c <0xF0) {
 		if (catdoc_read(buf+1, 1, 2, f)<=2) return (int)EOF;
@@ -250,7 +252,7 @@ char *to_utf8(unsigned int uc) {
 }    
 
 struct cp_map {
-	int codepage;
+	uint16_t codepage;
 	char *charset_name;
 };
 

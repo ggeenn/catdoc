@@ -2,7 +2,7 @@
  * @file   ppttypes.h
  * @author Alex Ott <alexott@gmail.com>
  * @date   26 ‰≈À 2004
- * Version: $Id: ppttypes.h,v 1.1.1.1 2006/02/24 17:44:06 vitus Exp $
+ * Version: $Id: ppttypes.h,v 1.1 2006-02-24 17:44:06 vitus Exp $
  * Copyright: Alex Ott
  * 
  * @brief  Enumerations for .ppt records

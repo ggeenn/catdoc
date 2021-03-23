@@ -2,7 +2,7 @@
  * @file   pptparse.c
  * @author Alex Ott <alexott@gmail.com>
  * @date   23 ‰≈À 2004
- * Version: $Id: pptparse.c,v 1.1.1.1 2006/02/24 17:44:06 vitus Exp $
+ * Version: $Id: pptparse.c,v 1.2 2006-10-17 19:11:29 vitus Exp $
  * Copyright: Alex Ott
  * 
  * @brief  .ppt parsing routines
@@ -21,12 +21,17 @@
 #include "catdoc.h"
 #include "ppttypes.h"
 
+void print_value(unsigned char* value);
+
+char *slide_separator = "\f"; 
+
 static void process_item (int rectype, long reclen, FILE* input);
 
 #if !defined(min)
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #endif
 
+static void start_text_out(void);
 
 /** 
  * 
@@ -34,12 +39,21 @@ static void process_item (int rectype, long reclen, FILE* input);
  * @param input 
  * @param filename 
  */
+
+enum {START_FILE,START_SLIDE,TEXTOUT,END_FILE} slide_state ;
+
+static void start_text_out(void) {
+	if (slide_state == START_SLIDE) {
+		print_value(" ");// fputs(slide_separator, stdout);
+	}
+	slide_state = TEXTOUT;
+}	
 void do_ppt(FILE *input,char *filename) {
 	int itemsread=1;
 	int rectype;
 	long reclen;
 	unsigned char recbuf[8];
-
+	slide_state = START_FILE;
 	while(itemsread) {
 		itemsread = catdoc_read(recbuf, 1, 8, input);
 /* 		fprintf(stderr,"itemsread=%d: ",itemsread); */
@@ -72,12 +86,26 @@ void do_ppt(FILE *input,char *filename) {
  */
 static void process_item (int rectype, long reclen, FILE* input) {
 	int i=0, u;
-	static char buf[2];
-
+	static unsigned char buf[2];
+	// -------
+	fprintf(stderr, "Processing record %d length %d\n", rectype, reclen);
+	if (MAIN_MASTER == rectype || DOCUMENT == rectype)
+		return;
+	char* p = malloc(reclen);
+	int itemsread = catdoc_read(p, reclen, 1, input);
+	free(p);
+	return;
+	// -------
+/*	fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
+ *	*/
 	switch(rectype) {
 	case DOCUMENT_END:
 /* 		fprintf(stderr,"End of document, ended at %ld\n",catdoc_tell(input)); */
 		catdoc_seek(input, reclen, SEEK_CUR);
+		if (slide_state == TEXTOUT) {
+			print_value(" "); //fputs(slide_separator,stdout);
+			slide_state = END_FILE;
+		}	
 		break;
 
 	case DOCUMENT:
@@ -92,7 +120,6 @@ static void process_item (int rectype, long reclen, FILE* input) {
 
 	case SLIDE:
 /* 		fprintf(stderr,"Slide, reclen=%ld\n", reclen); */
-/*  		fputs("---------------------------------------\n",stderr); */
 		break;
 
 	case SLIDE_ATOM:
@@ -133,14 +160,15 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		
 	case TEXT_BYTES_ATOM: {
 /* 			fprintf(stderr,"TextBytes, reclen=%ld\n", reclen); */
+			start_text_out();
 			for(i=0; i < reclen; i++) {
 				catdoc_read(buf,1,1,input);
-				if((unsigned char)*buf!=0x0d)
-					fputs(convert_char((unsigned char)*buf),stdout);
+				if ((unsigned char)*buf != 0x0d)
+					print_value(convert_char((unsigned char)*buf));// fputs(convert_char((unsigned char)*buf), stdout);
 				else
-					fputc('\n',stdout);
+					print_value(" "); //fputc('\n', stdout);
 			}
-			fputc('\n',stdout);
+			//fputc('\n',stdout);
 		}
 		break;
 		
@@ -149,16 +177,17 @@ static void process_item (int rectype, long reclen, FILE* input) {
 			long text_len;
 			
 /* 			fprintf(stderr,"CString, reclen=%ld\n", reclen); */
+			start_text_out();
 			text_len=reclen/2;
 			for(i=0; i < text_len; i++) {
 				catdoc_read(buf,2,1,input);
 				u=(unsigned short)getshort(buf,0);
-				if(u!=0x0d)
-					fputs(convert_char(u),stdout);
+				if (u != 0x0d)
+					print_value(convert_char(u)); //fputs(convert_char(u),stdout);
 				else
-					fputc('\n',stdout);
+					print_value(" ");// fputc('\n', stdout);
 			}
-			fputc('\n',stdout);
+			//fputc('\n',stdout);
 		}
 		break;
 		
@@ -247,7 +276,9 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		break;
 
 	case SLIDE_PERSIST_ATOM:
-/* 		fprintf(stderr,"SlidePersistAtom, reclen=%ld\n", reclen); */
+		if (slide_state != START_FILE) {
+			slide_state = START_SLIDE;
+		}	
 		catdoc_seek(input, reclen, SEEK_CUR);
 		break;
 

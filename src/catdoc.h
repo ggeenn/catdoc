@@ -11,6 +11,24 @@
 #include <config.h>
 #endif
 
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#else
+/* If there is no stdint.h, lets define some common integer types
+ * ourselves */
+#define int16_t	short int
+#define uint16_t unsigned short int
+#ifdef __MSDOS__
+/* MS-DOS is only supported platform where int is 16-bit */
+#define int32_t  long int
+#define uint32_t unsigned long int
+#else
+#define int32_t int
+#define uint32_t unsigned int
+#endif
+#endif
+
+
 /* There is some strange thing on aix */
 #if (defined(_AIX)||defined(___AIX)) && !defined(__unix)
 # define __unix 1
@@ -150,14 +168,14 @@ extern  int wrap_margin;
 /* Structure to store UNICODE -> target charset mappings */
 /* array of 256 pointers (which may be null) to arrays of 256 short ints
    which contain 8-bit character codes or -1 if no matching char */
-typedef short int  ** CHARSET;
+typedef int16_t  ** CHARSET;
 
 /* structure to store multicharacter substitution mapping */
 /* Array of 256 pointers to arrays of 256 pointers to string */
 /* configuration variables defined in catdoc.c */
 typedef char *** SUBSTMAP;
 
-extern short int *source_charset;
+extern uint16_t *source_charset;
 extern char bad_char[]; /* defines one-symbol string to replace unknown unicode chars */
 extern char *source_csname;
 extern char *dest_csname;
@@ -187,10 +205,10 @@ extern int get_8bit_char (FILE *f,long *offset,long fileend);
 extern int get_word8_char (FILE *f,long *offset,long fileend);
 
 extern const char *charset_from_codepage(unsigned int codepage);
-extern  short int *read_charset(const char *filename);
+extern  uint16_t *read_charset(const char *filename);
 extern CHARSET make_reverse_map (short int *charset);
 
-extern int to_unicode (short int *charset, int c) ;
+extern int to_unicode (uint16_t *charset, int c) ;
 
 extern int from_unicode (CHARSET charset, int u) ;
 
@@ -221,7 +239,7 @@ void copy_out(FILE *f, char *header);
 void output_paragraph(unsigned short int *buffer) ;
 int parse_rtf(FILE *f);
 /* format recognition*/
-int analyze_format(FILE *f);
+int analyze_format(FILE *f, char* filename);
 void list_charsets(void);
 int parse_word_header(unsigned char *buffer,FILE *f,int offset,long curpos);
 /* large buffers for file IO*/
@@ -230,7 +248,7 @@ extern char *input_buffer,*output_buffer;
 	char *strdup(const char *s);
 #endif
 /* numeric conversions */	
-long int getlong(unsigned char *buffer,int offset);
-unsigned long int getulong(unsigned char *buffer,int offset);
-unsigned int getshort(unsigned char *buffer,int offset);
+int32_t getlong(unsigned char *buffer,int offset);
+uint32_t getulong(unsigned char *buffer,int offset);
+uint16_t getshort(unsigned char *buffer,int offset);
 #endif

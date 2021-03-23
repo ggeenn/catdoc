@@ -2,7 +2,7 @@
  * @file   ole.h
  * @author Alex Ott <ott@jet.msk.su>
  * @date   03 È¿Œ 2003
- * Version: $Id: ole.h,v 1.1.1.1 2006/02/24 17:44:06 vitus Exp $
+ * Version: $Id: ole.h,v 1.1 2006-02-24 17:44:06 vitus Exp $
  * Copyright: Alex Ott, 2003, 
  * 
  * @brief  
@@ -16,7 +16,7 @@
 #define BBD_BLOCK_SIZE     512
 #define SBD_BLOCK_SIZE      64
 #define PROP_BLOCK_SIZE    128
-#define OLENAMELENGHT       32
+#define OLENAMELENGTH       32
 #define MSAT_ORIG_SIZE     436
 
 typedef enum {
@@ -28,7 +28,7 @@ typedef enum {
 
 typedef struct {
 	FILE *file;
-	char name[OLENAMELENGHT+1];
+	char name[OLENAMELENGTH+1];
 	long int startBlock;
 	long int curBlock;
 	unsigned long int length;

@@ -103,6 +103,7 @@ RTFTypeMap rtf_types[]={
 
 #define RTFNAMEMAXLEN 32
 #define RTFARGSMAXLEN 64
+#define MAX_DIGITS_IN_NUMBER 10
 
 /**
  * Structure describing rtf command
@@ -171,7 +172,7 @@ int rtf_level=0;
 extern unsigned short int buffer[];
 void add_to_buffer(int *bufptr,unsigned short int c) {
 	buffer[++(*bufptr)]=c;
-	if (*bufptr > PARAGRAPH_BUFFER-2) {
+	if (*bufptr >= PARAGRAPH_BUFFER-2) {
 		buffer[++(*bufptr)]=0;
 		output_paragraph(buffer);
 		*bufptr=-1;
@@ -261,8 +262,23 @@ int parse_rtf(FILE *f) {
 				if (data_skip_mode == 0)
 					add_to_buffer(&bufptr,com.numarg);
 				i=groups[group_count].uc;
-				while((--i)>0)
-					fgetc(f);
+				while((--i)>0) {
+					int c=fgetc(f);
+					if (c == '\\') {
+						c = fgetc(f);
+						switch (c) {
+						 case '\\': break;
+						 case '\'':
+						 	/* skip two hex digits */
+							fgetc(f);
+							fgetc(f);
+							break;
+						default:
+							break;
+						}
+					}		
+				}	
+					
 				break;
 			case RTF_PARA:
 				/*if (para_mode > 0) {*/
@@ -355,6 +371,8 @@ signed long getNumber(FILE *f) {
 	while(isdigit(c=fgetc(f)) || c=='-') {
 		if(feof(f))
 			return -1;
+		if (count > MAX_DIGITS_IN_NUMBER) 
+			break;
 		buf[count++]=(char)c;
 	}
 	ungetc(c,f);

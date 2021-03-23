@@ -39,8 +39,8 @@ SUBSTMAP read_substmap(char* filename) {
 	char s[256];
 	char stopchar;
 	int escaped, lineno=0, i;
-	unsigned int uc;
-	path=find_file(filename,add_exe_path(map_path));
+    int32_t uc;
+	path=find_file(filename,/*add_exe_path*/(map_path));
 	if (!path) {
 		free(map);
 		return(NULL);
@@ -51,7 +51,8 @@ SUBSTMAP read_substmap(char* filename) {
 	}
 	f=fopen(path,"rb");
 	if (!f) {
-		perror("catdoc");
+		perror(path);
+		free(map);
 		return NULL;
 	}
 	if (input_buffer)
@@ -78,7 +79,7 @@ SUBSTMAP read_substmap(char* filename) {
 		}
 		/* skip space between  code and sequence */
 		for(;*p && isspace(*p);p++);
-		if (!p) continue;
+		if (!*p) continue;
 		switch (*p) {
 			case '\'':
 			case '"':

@@ -21,55 +21,67 @@
 /* charset.c                                                            */
 /************************************************************************/
 static char outputbuffer[LINE_BUF_SIZE]="";
-void out_char(const char *chunk) {
-	static int bufpos=0;
-	int eol_flag=0;
-	const char *p; char *q;
-	if (!wrap_margin) {
-		fputs(chunk,stdout);
-		return;
-	}
 
-	for (q=outputbuffer+bufpos,p=chunk;
-			*p;
-			*(q++)=*(p++),bufpos++) {
-			if (*p=='\n') eol_flag=1;
-	}		
-	*q=0;
-		 /* This strcat is safe. wrap margin setting
-							 code in main.c ensures that wrap_margin is 
-							 less than LINE_BUF_SIZE-strlen(largest chunk)
-							 */  
-	if (eol_flag) {
-		/* End of paragraph */
-		char *q = map_subst(spec_chars,'\n');
-		fputs(outputbuffer,stdout);
-		*outputbuffer=0;
-		bufpos=0;
-		if (q) {
-			 fputs(q,stdout);
-		} else {
-			fputc('\n',stdout);
-		}	
-	} else if (bufpos>wrap_margin) {
-		char *q=outputbuffer,*p=outputbuffer+wrap_margin;
-		
-		while (p>outputbuffer&&!isspace(*p)) p--;
-		if (p==outputbuffer) {
-			/*worst case - nowhere to wrap. Will use brute force */
-			fwrite(outputbuffer,wrap_margin,1,stdout);
-			fputc('\n',stdout);
-			p=outputbuffer+wrap_margin;
-		} else {
-			*p=0;p++;
-			fputs(outputbuffer,stdout);
-			fputc('\n',stdout);
-		}
-		for(q=outputbuffer;*p;p++,q++) *q=*p;
-		bufpos=q-outputbuffer;
-		*q=0;
-	}
-}
+int para_double_newline = 1;
+
+//void out_char(const char *chunk) {
+//	static int bufpos=0;
+//	int eol_flag=0;
+//	const char *p; char *q;
+//	if (!wrap_margin) {
+//		fputs(chunk,stdout);
+//		return;
+//	}
+//
+//	for (q=outputbuffer+bufpos,p=chunk;
+//			*p;
+//			*(q++)=*(p++),bufpos++) {
+//			if (*p=='\n') eol_flag=1;
+//	}
+//	*q=0;
+//		 /* This strcat is safe. wrap margin setting
+//							 code in main.c ensures that wrap_margin is 
+//							 less than LINE_BUF_SIZE-strlen(largest chunk)
+//							 */  
+//	if (eol_flag) {
+//		/* End of paragraph */
+//		char *q = map_subst(spec_chars,'\n');
+//		fputs(outputbuffer,stdout);
+//		*outputbuffer=0;
+//		bufpos=0;
+//		if (para_double_newline) {
+//			if (q) {
+//				 fputs(q,stdout);
+//			} else {
+//				fputc('\n',stdout);
+//			}
+//		}
+//	} else if (bufpos>wrap_margin) {
+//		char *q=outputbuffer,*p=outputbuffer+wrap_margin;
+//		
+//		while (p>outputbuffer&&*p!=' '&& *p!='\t') p--;
+//		if (p==outputbuffer) {
+//			/*worst case - nowhere to wrap. Will use brute force */
+//			int i = wrap_margin;
+//			if (target_charset == NULL) {
+//				/* NULL target_charest means UTF-8 */
+//				/* go back to start of nearest utf-8 character */
+//				while(i>0 && (outputbuffer[i] & 0xC0) == 0x80) i--;
+//			}			
+//			fwrite(outputbuffer,i,1,stdout);
+//
+//			fputc('\n',stdout);
+//			p=outputbuffer+i;
+//		} else {
+//			*p=0;p++;
+//			fputs(outputbuffer,stdout);
+//			fputc('\n',stdout);
+//		}
+//		for(q=outputbuffer;*p;p++,q++) *q=*p;
+//		bufpos=q-outputbuffer;
+//		*q=0;
+//	}
+//}
 
 /************************************************************************/
 /* Main output function.
@@ -77,11 +89,11 @@ void out_char(const char *chunk) {
  * in the buffer as array of unicode 16-bit codes and pass to this
  * function
  ************************************************************************/ 
-void output_paragraph(unsigned short int *buffer) {
-	unsigned short int *p;
-	int countout=0;
-	for (p=buffer;*p;p++) {
-		out_char(convert_char(*p));
-		countout++;
-	}
-}
+//void output_paragraph(unsigned short int *buffer) {
+//	unsigned short int *p;
+//	int countout=0;
+//	for (p=buffer;*p;p++) {
+//		out_char(convert_char(*p));
+//		countout++;
+//	}
+//}

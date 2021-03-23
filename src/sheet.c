@@ -34,7 +34,9 @@ unsigned char **allocate (int row,int col) {
 	}
 	if (col>=rowptr[row].end) {
 		newcol=(col/16+1)*16;
-		rowptr[row].cells=realloc(rowptr[row].cells,newcol*sizeof(char *));
+		rowptr[row].cells=
+		   (unsigned char**)realloc(rowptr[row].cells,
+		                            newcol*sizeof(unsigned char *));
 		if (rowptr[row].cells == NULL) {
 			perror("allocating row");
 			exit(1);
@@ -71,52 +73,52 @@ void free_sheet(void) {
  * prints out one value with quoting
  * uses global variable quote_mode
  */ 
-void print_value(unsigned char *value) 
-{
-	int i,len;
-	int quotes=0;
-	if (value != NULL) {
-		len=strlen((char *)value);
-	} else {
-		len = 0;
-	}
-	switch (quote_mode) {
-		case QUOTE_NEVER:
-			break;
-		case QUOTE_SPACES_ONLY:	  
-			for (i=0;i<len;i++) {
-				if (isspace(value[i]) || value[i]==cell_separator || 
-						value[i]=='"') {
-					quotes=1;
-					break;
-				}
-			}    
-			break;
-		case QUOTE_ALL_STRINGS:
-			{ char *endptr;
-			  strtod(value,&endptr);
-			  quotes=(*endptr != '0');
-			break;
-			}  
-		case QUOTE_EVERYTHING:
-			quotes = 1;
-			break;     
-	}  	  
-	if (quotes) {
-		fputc('\"',stdout);
-		for (i=0;i<len;i++) {
-			if (value[i]=='\"') {
-				fputc('\"',stdout);
-				fputc('\"',stdout);
-			} else {
-				fputc(value[i],stdout);
-			}
-		}   
-		fputc('\"',stdout);
-	} else {
-		fputs((char *)value,stdout);
-	}
-}    
+//void print_value(unsigned char *value) 
+//{
+//	int i,len;
+//	int quotes=0;
+//	if (value != NULL) {
+//		len=strlen((char *)value);
+//	} else {
+//		len = 0;
+//	}
+//	switch (quote_mode) {
+//		case QUOTE_NEVER:
+//			break;
+//		case QUOTE_SPACES_ONLY:	  
+//			for (i=0;i<len;i++) {
+//				if (isspace(value[i]) || value[i]==cell_separator || 
+//						value[i]=='"') {
+//					quotes=1;
+//					break;
+//				}
+//			}    
+//			break;
+//		case QUOTE_ALL_STRINGS:
+//			{ char *endptr;
+//			  strtod((char *)value,&endptr);
+//			  quotes=(*endptr != '0');
+//			break;
+//			}  
+//		case QUOTE_EVERYTHING:
+//			quotes = 1;
+//			break;     
+//	}  	  
+//	if (quotes) {
+//		fputc('\"',stdout);
+//		for (i=0;i<len;i++) {
+//			if (value[i]=='\"') {
+//				fputc('\"',stdout);
+//				fputc('\"',stdout);
+//			} else {
+//				fputc(value[i],stdout);
+//			}
+//		}   
+//		fputc('\"',stdout);
+//	} else {
+//		fputs((char *)value,stdout);
+//	}
+//}    
 /*
  * Prints sheet to stdout. Uses global variable cell_separator
  */ 
@@ -130,7 +132,7 @@ void print_sheet(void) {
 		if (row->cells) {
 			for (j=0,col=row->cells;j<=row->last;j++,col++) {
 				if (j){
-					fputc(cell_separator,stdout);
+					print_value(" ");// fputc(cell_separator, stdout);
 					printed=1;
 				}
 				if (*col) {
@@ -139,10 +141,10 @@ void print_sheet(void) {
 				}
 			}
 			if (printed) {
-				fputc('\n',stdout);
+				//fputc('\n',stdout);
 				printed=0;
 			}
 		}
 	}
-	fputs(sheet_separator,stdout);
+	//fputs(sheet_separator,stdout);
 }

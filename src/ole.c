@@ -2,14 +2,14 @@
  * @file   ole.c
  * @author Alex Ott, Victor B Wagner
  * @date   Wed Jun 11 12:33:01 2003
- * Version: $Id: ole.c,v 1.2 2006/02/25 15:28:14 vitus Exp $
+ * Version: $Id: ole.c,v 1.2 2006-02-25 15:28:14 vitus Exp $
  * Copyright: Victor B Wagner, 1996-2003 Alex Ott, 2003
- * 
+ *
  * @brief  Parsing structure of MS Office compound document
- * 
+ *
  * This file is part of catdoc project
  * and distributed under GNU Public License
- * 
+ *
  */
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -37,31 +37,32 @@ long propCurNumber, propLen, propNumber, propStart;
 unsigned char *properties=NULL;
 long int fileLength=0;
 
-static unsigned char ole_sign[]={0xD0,0xCF,0x11,0xE0,0xA1,0xB1,0x1A,0xE1,0};
+char ole_sign[]={0xD0,0xCF,0x11,0xE0,0xA1,0xB1,0x1A,0xE1,0};
+char zip_sign[]="PK\003\004";
 
-
-/** 
+/**
  * Initializes ole structure
- * 
+ *
  * @param f (FILE *) compound document file, positioned at bufSize
- *           byte. Might be pipe or socket 
+ *           byte. Might be pipe or socket
  * @param buffer (void *) bytes already read from f
  * @param bufSize number of bytes already read from f should be less
- *                than 512 
- * 
- * @return 
+ *                than 512
+ *
+ * @return
  */
 FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 	unsigned char oleBuf[BBD_BLOCK_SIZE];
 	unsigned char *tmpBuf;
 	FILE *newfile;
 	int ret=0, i;
+	long int bbdSize;
 	long int sbdMaxLen, sbdCurrent, propMaxLen, propCurrent, mblock, msat_size;
 	oleEntry *tEntry;
 
 	/* deleting old data (if it was allocated) */
 	ole_finish();
-	
+
 	if (fseek(f,0,SEEK_SET) == -1) {
 		if ( errno == ESPIPE ) {
 			/* We got non-seekable file, create temp file */
@@ -73,10 +74,11 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 				ret=fwrite(buffer, 1, bufSize, newfile);
 				if(ret != bufSize) {
 					perror("Can't write to tmp file");
+					fclose(newfile);
 					return NULL;
 				}
 			}
-			
+
 			while(!feof(f)){
 				ret=fread(oleBuf,1,BBD_BLOCK_SIZE,f);
 				fwrite(oleBuf, 1, ret, newfile);
@@ -88,7 +90,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		}
 	} else {
 		newfile=f;
-	}	
+	}
 	fseek(newfile,0,SEEK_END);
 	fileLength=ftell(newfile);
 /* 	fprintf(stderr, "fileLength=%ld\n", fileLength); */
@@ -97,25 +99,38 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 	if ( ret != BBD_BLOCK_SIZE ) {
 		return NULL;
 	}
-	if (strncmp(oleBuf,ole_sign,8) != 0) {
+	if (strncmp((char *)&oleBuf,zip_sign,4) == 0) {
+		fprintf(stderr,"Looks like ZIP archive or Office 2007 or later. Not supported\n");
+		return NULL;
+	} else if (strncmp((char *)&oleBuf,ole_sign,8) != 0) {
 		return NULL;
 	}
  	sectorSize = 1<<getshort(oleBuf,0x1e);
 	shortSectorSize=1<<getshort(oleBuf,0x20);
-	
+
 /* Read BBD into memory */
 	bbdNumBlocks = getulong(oleBuf,0x2c);
+	bbdSize = bbdNumBlocks * sectorSize;
+	if (bbdSize > fileLength) {
+		/* broken file, BBD size greater than entire file*/
+		return NULL;
+	}
+
 	if((BBD=malloc(bbdNumBlocks*sectorSize)) == NULL ) {
 		return NULL;
 	}
-	
+
 	if((tmpBuf=malloc(MSAT_ORIG_SIZE)) == NULL ) {
 		return NULL;
 	}
 	memcpy(tmpBuf,oleBuf+0x4c,MSAT_ORIG_SIZE);
 	mblock=getlong(oleBuf,0x44);
 	msat_size=getlong(oleBuf,0x48);
-
+	if (msat_size * sectorSize > fileLength) {
+		free(tmpBuf);
+		return NULL;
+	}
+		
 /* 	fprintf(stderr, "msat_size=%ld\n", msat_size); */
 
 	i=0;
@@ -130,7 +145,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 			ole_finish();
 			return NULL;
 		}
-		
+
 		fseek(newfile, 512+mblock*sectorSize, SEEK_SET);
 		if(fread(tmpBuf+MSAT_ORIG_SIZE+(sectorSize-4)*i,
 						 1, sectorSize, newfile) != sectorSize) {
@@ -142,11 +157,11 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		i++;
 		mblock=getlong(tmpBuf, MSAT_ORIG_SIZE+(sectorSize-4)*i);
 	}
-	
+
 /* 	fprintf(stderr, "bbdNumBlocks=%ld\n", bbdNumBlocks); */
 	for(i=0; i< bbdNumBlocks; i++) {
 		long int bbdSector=getlong(tmpBuf,4*i);
-		
+
 		if (bbdSector >= fileLength/sectorSize || bbdSector < 0) {
 			fprintf(stderr, "Bad BBD entry!\n");
 			ole_finish();
@@ -161,7 +176,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		}
 	}
 	free(tmpBuf);
-	
+
 /* Read SBD into memory */
 	sbdLen=0;
 	sbdMaxLen=10;
@@ -177,7 +192,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 			sbdLen++;
 			if (sbdLen >= sbdMaxLen) {
 				unsigned char *newSBD;
-				
+
 				sbdMaxLen+=5;
 				if ((newSBD=realloc(SBD, sectorSize*sbdMaxLen)) != NULL) {
 					SBD=newSBD;
@@ -186,6 +201,10 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 					ole_finish();
 					return NULL;
 				}
+			}
+			if (sbdCurrent * 4 > bbdSize) {
+				ole_finish();
+				return NULL;
 			}
 			sbdCurrent = getlong(BBD, sbdCurrent*4);
 			if(sbdCurrent < 0 ||
@@ -209,12 +228,19 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		while(1) {
 /*  			fprintf(stderr, "propCurrent=%ld\n",propCurrent); */
 			fseek(newfile, 512+propCurrent*sectorSize, SEEK_SET);
-			fread(properties+propLen*sectorSize,
-				  1, sectorSize, newfile);
+			errno=0;
+			if (fread(properties+propLen*sectorSize,
+				  1, sectorSize, newfile)!=sectorSize) {
+				  if (errno != 0) {
+					perror("reading properties catalog");
+				  }
+				  ole_finish();
+				  return NULL;
+			}
 			propLen++;
 			if (propLen >= propMaxLen) {
 				unsigned char *newProp;
-				
+
 				propMaxLen+=5;
 				if ((newProp=realloc(properties, propMaxLen*sectorSize)) != NULL)
 					properties=newProp;
@@ -224,11 +250,11 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 					return NULL;
 				}
 			}
-			
+
 			propCurrent = getlong(BBD, propCurrent*4);
 			if(propCurrent < 0 ||
-			   propCurrent >= fileLength/sectorSize ) {
-				break;
+			   propCurrent >= bbdSize/4 ) {
+			   break;
 			}
 		}
 /*  		fprintf(stderr, "propLen=%ld\n",propLen); */
@@ -239,8 +265,8 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		properties = NULL;
 		return NULL;
 	}
-	
-	
+
+
 /* Find Root Entry */
 	while((tEntry=(oleEntry*)ole_readdir(newfile)) != NULL) {
 		if (tEntry->type == oleRootDir ) {
@@ -254,39 +280,39 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 	if (!rootEntry) {
 		fprintf(stderr,"Broken OLE structure. Cannot find root entry in this file!\n");		ole_finish();
 		return NULL;
-	}	
+	}
 	return newfile;
 }
 
-/** 
- * 
- * 
- * @param oleBuf 
- * 
- * @return 
+/**
+ *
+ *
+ * @param oleBuf
+ *
+ * @return
  */
 int rightOleType(unsigned char *oleBuf) {
 	return (oleBuf[0x42] == 1 || oleBuf[0x42] == 2 ||
 			oleBuf[0x42] == 3 || oleBuf[0x42] == 5 );
 }
 
-/** 
- * 
- * 
- * @param oleBuf 
- * 
- * @return 
+/**
+ *
+ *
+ * @param oleBuf
+ *
+ * @return
  */
 oleType getOleType(unsigned char *oleBuf) {
 	return (oleType)((unsigned char)oleBuf[0x42]);
 }
 
-/** 
+/**
  * Reads next directory entry from file
- * 
+ *
  * @param name buffer for name converted to us-ascii should be at least 33 chars long
- * @param size size of file 
- * 
+ * @param size size of file
+ *
  * @return 0 if everything is ok -1 on error
  */
 FILE *ole_readdir(FILE *f) {
@@ -294,13 +320,13 @@ FILE *ole_readdir(FILE *f) {
 	unsigned char *oleBuf;
 	oleEntry *e=NULL;
 	long int chainMaxLen, chainCurrent;
-	
+
 	if ( properties == NULL || propCurNumber >= propNumber || f == NULL )
 		return NULL;
 	oleBuf=properties + propCurNumber*PROP_BLOCK_SIZE;
 	if( !rightOleType(oleBuf))
 		return NULL;
-	if ((e = (oleEntry*)malloc(sizeof(oleEntry))) == NULL) {
+	if ((e = (oleEntry*) calloc(sizeof(oleEntry),1)) == NULL) {
 		perror("Can\'t allocate memory");
 		return NULL;
 	}
@@ -309,8 +335,12 @@ FILE *ole_readdir(FILE *f) {
 	e->file=f;
 	e->startBlock=getlong(oleBuf,0x74);
 	e->blocks=NULL;
-	
+
 	nLen=getshort(oleBuf,0x40);
+	if (nLen > 2 * OLENAMELENGTH) {
+		free(e);
+		return NULL;
+	}
 	for (i=0 ; i < nLen /2; i++)
 		e->name[i]=(char)oleBuf[i*2];
 	e->name[i]='\0';
@@ -328,18 +358,36 @@ FILE *ole_readdir(FILE *f) {
 		(e->startBlock <=
 		 fileLength/(e->isBigBlock ? sectorSize : shortSectorSize))) {
 		if((e->blocks=malloc(chainMaxLen*sizeof(long int))) == NULL ) {
+			free(e);
 			return NULL;
 		}
 		while(1) {
+			if(chainCurrent < 0 ||
+			   chainCurrent >= (
+                               e->isBigBlock ?
+                               ((bbdNumBlocks*sectorSize)/4) :
+                               ((sbdNumber*shortSectorSize)/4)
+                               ) ||
+			   (e->numOfBlocks >
+				e->length/(
+                                    e->isBigBlock ?
+                                    sectorSize :
+                                    shortSectorSize
+                                    )
+                                )
+                           ) {
+/*   				fprintf(stderr, "chain End=%ld\n", chainCurrent);   */
+				break;
+			}
 /* 			fprintf(stderr, "chainCurrent=%ld\n", chainCurrent); */
 			e->blocks[e->numOfBlocks++] = chainCurrent;
 			if (e->numOfBlocks >= chainMaxLen) {
 				long int *newChain;
 				chainMaxLen+=25;
 				if ((newChain=realloc(e->blocks,
-									  chainMaxLen*sizeof(long int))) != NULL)
+									  chainMaxLen*sizeof(long int))) != NULL) {
 					e->blocks=newChain;
-				else {
+				} else {
 					perror("Properties realloc error");
 					free(e->blocks);
 					e->blocks=NULL;
@@ -353,50 +401,41 @@ FILE *ole_readdir(FILE *f) {
 			} else {
 				chainCurrent=-1;
 			}
-			if(chainCurrent <= 0 ||
-			   chainCurrent >= ( e->isBigBlock ?
-								 ((bbdNumBlocks*sectorSize)/4)
-								 : ((sbdNumber*shortSectorSize)/4) ) ||
-			   (e->numOfBlocks >
-				e->length/(e->isBigBlock ? sectorSize : shortSectorSize))) {
-/*   				fprintf(stderr, "chain End=%ld\n", chainCurrent);   */
-				break;
-			}
 		}
 	}
-	
+
 	if(e->length > (e->isBigBlock ? sectorSize : shortSectorSize)*e->numOfBlocks)
 		e->length = (e->isBigBlock ? sectorSize : shortSectorSize)*e->numOfBlocks;
 /* 	fprintf(stderr, "READDIR: e->name=%s e->numOfBlocks=%ld length=%ld\n", */
 /* 					e->name, e->numOfBlocks, e->length); */
-	
+
 	return (FILE*)e;
 }
 
-/** 
+/**
  * Open stream, which correspond to directory entry last read by
- * ole_readdir 
- * 
- * 
+ * ole_readdir
+ *
+ *
  * @return opaque pointer to pass to ole_read, casted to (FILE *)
  */
 int ole_open(FILE *stream) {
 	oleEntry *e=(oleEntry *)stream;
 	if ( e->type != oleStream)
 		return -2;
-	
+
 	e->ole_offset=0;
 	e->file_offset= ftell(e->file);
 	return 0;
 }
 
-/** 
- * 
- * 
- * @param e 
- * @param blk 
- * 
- * @return 
+/**
+ *
+ *
+ * @param e
+ * @param blk
+ *
+ * @return
  */
 long int calcFileBlockOffset(oleEntry *e, long int blk) {
 	long int res;
@@ -406,7 +445,7 @@ long int calcFileBlockOffset(oleEntry *e, long int blk) {
 		long int sbdPerSector=sectorSize/shortSectorSize;
 		long int sbdSecNum=e->blocks[blk]/sbdPerSector;
 		long int sbdSecMod=e->blocks[blk]%sbdPerSector;
-/* 		fprintf(stderr, "calcoffset: e->name=%s e->numOfBlocks=%ld length=%ld sbdSecNum=%ld rootEntry->blocks=%p\n", 
+/* 		fprintf(stderr, "calcoffset: e->name=%s e->numOfBlocks=%ld length=%ld sbdSecNum=%ld rootEntry->blocks=%p\n",
  						e->name, e->numOfBlocks, e->length, sbdSecNum, rootEntry->blocks);*/
 		res=512 + rootEntry->blocks[sbdSecNum]*sectorSize + sbdSecMod*shortSectorSize;
 	}
@@ -414,14 +453,14 @@ long int calcFileBlockOffset(oleEntry *e, long int blk) {
 }
 
 
-/** 
+/**
  * Reads block from open ole stream interface-compatible with fread
- * 
+ *
  * @param ptr pointer to buffer for read to
  * @param size size of block
- * @param nmemb size in blocks 
+ * @param nmemb size in blocks
  * @param stream pointer to FILE* structure
- * 
+ *
  * @return number of readed blocks
  */
 size_t ole_read(void *ptr, size_t size, size_t nmemb, FILE *stream) {
@@ -430,22 +469,22 @@ size_t ole_read(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 	long int blockNumber, modBlock, toReadBlocks, toReadBytes, bytesInBlock;
 	long int ssize;				/**< Size of block */
 	long int newoffset;
-	unsigned char *cptr = ptr;	
+	unsigned char *cptr = ptr;
 	if( e->ole_offset+llen > e->length )
 		llen= e->length - e->ole_offset;
-	
+
 	ssize = (e->isBigBlock ? sectorSize : shortSectorSize);
 	blockNumber=e->ole_offset/ssize;
 /* 	fprintf(stderr, "blockNumber=%ld e->numOfBlocks=%ld llen=%ld\n", */
 /* 			blockNumber, e->numOfBlocks, llen); */
 	if ( blockNumber >= e->numOfBlocks || llen <=0 )
 		return 0;
-	
+
 	modBlock=e->ole_offset%ssize;
 	bytesInBlock = ssize - modBlock;
 	if(bytesInBlock < llen) {
 		toReadBlocks = (llen-bytesInBlock)/ssize;
-		toReadBytes = (llen-bytesInBlock)%ssize; 
+		toReadBytes = (llen-bytesInBlock)%ssize;
 	} else {
 		toReadBlocks = toReadBytes = 0;
 	}
@@ -461,8 +500,8 @@ size_t ole_read(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 		int readbytes;
 		blockNumber++;
 		newoffset = calcFileBlockOffset(e,blockNumber);
-		if (newoffset != e->file_offset);
-		fseek(e->file, e->file_offset=newoffset , SEEK_SET);
+		if (newoffset != e->file_offset)
+			fseek(e->file, e->file_offset=newoffset , SEEK_SET);
 		readbytes=fread(cptr+rread, 1, min(llen-rread, ssize), e->file);
 		rread +=readbytes;
 		e->file_offset +=readbytes;
@@ -480,14 +519,14 @@ size_t ole_read(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 	e->ole_offset, rread, llen);*/
 	e->ole_offset+=rread;
 	return rread;
-}	
+}
 
-/** 
- * 
- * 
- * @param stream 
- * 
- * @return 
+/**
+ *
+ *
+ * @param stream
+ *
+ * @return
  */
 int ole_eof(FILE *stream) {
 	oleEntry *e=(oleEntry*)stream;
@@ -496,9 +535,9 @@ int ole_eof(FILE *stream) {
 	return (e->ole_offset >=  e->length);
 }
 
-/** 
- * 
- * 
+/**
+ *
+ *
  */
 void ole_finish(void) {
 	if ( BBD != NULL ) free(BBD);
@@ -509,12 +548,12 @@ void ole_finish(void) {
 	rootEntry = NULL;
 }
 
-/** 
- * 
- * 
- * @param stream 
- * 
- * @return 
+/**
+ *
+ *
+ * @param stream
+ *
+ * @return
  */
 int ole_close(FILE *stream) {
 	oleEntry *e=(oleEntry*)stream;
@@ -527,32 +566,32 @@ int ole_close(FILE *stream) {
 }
 
 /**
- * 
- * 
+ *
+ *
  * @param stream pointer to OLE stream structure
- * @param offset 
- * @param whence 
- * 
- * @return 
+ * @param offset
+ * @param whence
+ *
+ * @return
  */
 int ole_seek(FILE *stream, long offset, int whence) {
 	oleEntry *e=(oleEntry*)stream;
 	long int new_ole_offset=0, new_file_offset;
 	int ssize, modBlock, blockNumber;
-	
+
 	switch(whence) {
 	case SEEK_SET:
 		new_ole_offset=offset;
 		break;
-		
+
 	case SEEK_CUR:
 		new_ole_offset=e->ole_offset+offset;
 		break;
-		
+
 	case SEEK_END:
 		new_ole_offset=e->length+offset;
 		break;
-		
+
 	default:
 		errno=EINVAL;
 		return -1;
@@ -566,20 +605,20 @@ int ole_seek(FILE *stream, long offset, int whence) {
 	blockNumber=new_ole_offset/ssize;
 	if ( blockNumber >= e->numOfBlocks )
 		return -1;
-	
+
 	modBlock=new_ole_offset%ssize;
 	new_file_offset = calcFileBlockOffset(e,blockNumber)+modBlock;
 	fseek(e->file, e->file_offset=new_file_offset, SEEK_SET);
 	e->ole_offset=new_ole_offset;
-	
+
 	return 0;
 }
 
-/** 
+/**
  * Tell position inside OLE stream
- * 
+ *
  * @param stream pointer to OLE stream
- * 
+ *
  * @return current position inside OLE stream
  */
 long ole_tell(FILE *stream) {
@@ -589,8 +628,8 @@ long ole_tell(FILE *stream) {
 
 
 /**
- * 
- * 
+ *
+ *
  */
 size_t (*catdoc_read)(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int (*catdoc_eof)(FILE *stream);
@@ -607,10 +646,10 @@ void set_ole_func(void) {
 #ifdef feof
 /* feof is macro in Turbo C, so we need a real function to assign to
  * pointer
- */ 
+ */
 int my_feof(FILE *f) {
     return feof(f);
-}    
+}
 #define FEOF my_feof
 #else
 #define FEOF feof

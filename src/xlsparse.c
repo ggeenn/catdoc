@@ -49,10 +49,13 @@ void do_table(FILE *input,char *filename) {
 			if (reclen==8 || reclen==16) {
 				if (biff_version == 0x0809 ) {
 					itemsread=catdoc_read(rec,4,1,input);
+					if (itemsread == 0) 
+						break;
 					build_year=getshort(rec+2,0);
 					build_rel=getshort(rec,0);
+					(void) build_rel;
 					if(build_year > 5 ) {
-						itemsread=catdoc_read(rec,8,1,input);
+						catdoc_read(rec,8,1,input);
 						biff_version=8;
 						offset=12;
 					}
@@ -84,20 +87,21 @@ void do_table(FILE *input,char *filename) {
 		exit(1);
 	}    
 	while(itemsread){
-		char buffer[2];
-		rectype = 0;
+		unsigned char buffer[2];
+
 		itemsread = catdoc_read(buffer, 2, 1, input);
 		if (catdoc_eof(input)) {
 			process_item(MSEOF,0,NULL);
 			return;
 		}
 		
-		rectype=getshort(buffer,0);
 		if(itemsread == 0)
 			break;
-		reclen=0;
 
+		rectype=getshort(buffer,0);
 		itemsread = catdoc_read(buffer, 2, 1, input);
+		if(itemsread == 0)
+			break;
 		reclen=getshort(buffer,0);
 		if (reclen && reclen <MAX_MS_RECSIZE &&reclen >0){
 			itemsread = catdoc_read(rec, 1, reclen, input);
@@ -130,7 +134,7 @@ int prev_rectype=0;
  */
 unsigned char **saved_reference = NULL;
 
-void process_item (int rectype, int reclen, char *rec) {
+void process_item (int rectype, int reclen, unsigned char *rec) {
 	if (rectype != CONTINUE && prev_rectype == SST) {
 		/* we have accumulated  unparsed SST, and now encountered
 		 * another record, which indicates that SST is ended */
@@ -143,11 +147,9 @@ void process_item (int rectype, int reclen, char *rec) {
 		exit(69);
 		break;
 	}
-	case WRITEPROT: {
-		fprintf(stderr,"File is write protected\n");
+	case WRITEPROT: 
+		/* File is write protected, but we only read it */
 		break;
-	}
-		
 	case 0x42: {
 		if (source_charset) break;
 		codepage=getshort(rec,0);
@@ -191,7 +193,7 @@ void process_item (int rectype, int reclen, char *rec) {
 		if (sst != NULL)
 			free(sst);
 		
-		sstBuffer=(char*)malloc(reclen);
+		sstBuffer=(unsigned char*)malloc(reclen);
 		sstBytes = reclen;
 		if (sstBuffer == NULL ) {
 			perror("SSTptr alloc error! ");
@@ -241,6 +243,7 @@ void process_item (int rectype, int reclen, char *rec) {
 		endcol=getshort(rec,reclen-2);
 		pcell=allocate(row,endcol);
 		*pcell=NULL;
+		(void)startcol;
 		break;
 	}	   
 	case CONSTANT_STRING: {
@@ -261,13 +264,13 @@ void process_item (int rectype, int reclen, char *rec) {
 			exit(1);	 
 		} else if (sst[string_no] !=NULL) {	
 			int len;
-			char *outptr;
-			len=strlen(sst[string_no]);
+			unsigned char *outptr;
+			len=strlen((char *)sst[string_no]);
 			outptr=*pcell=malloc(len+1);
-			strcpy(outptr,sst[string_no]);
+			strcpy((char *)outptr,(char *)sst[string_no]);
 		} else {
 			*pcell=malloc(1);
-			strcpy(*pcell,"");
+			**pcell = 0;
 		}	
 		break;
 	}
@@ -282,7 +285,7 @@ void process_item (int rectype, int reclen, char *rec) {
 		row = getshort(rec,0)-startrow; 
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
-		*pcell=strdup(format_double(rec,6,getshort(rec,4)));
+		*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
 		break;
 	}
 	case INTEGER_CELL: {
@@ -292,7 +295,7 @@ void process_item (int rectype, int reclen, char *rec) {
 		row = getshort(rec,0)-startrow;
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
-		*pcell=strdup(format_int(getshort(rec,7),getshort(rec,4)));		  
+		*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));		  
 		break;
 
 	}				  
@@ -305,7 +308,7 @@ void process_item (int rectype, int reclen, char *rec) {
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
 		format_code = getshort(rec,4);
-		*pcell=strdup(format_rk(rec+6,format_code));
+		*pcell=(unsigned char *)strdup(format_rk(rec+6,format_code));
 		break;
 	}
 	case MULRK: {
@@ -319,7 +322,7 @@ void process_item (int rectype, int reclen, char *rec) {
 		for (offset=4,col=startcol;col<=endcol;offset+=6,col++) { 
 			pcell=allocate(row,col);
 			format_code=getshort(rec,offset);
-			*pcell=strdup(format_rk(rec+offset+2,format_code));
+			*pcell=(unsigned char *)strdup(format_rk(rec+offset+2,format_code));
 
 		}		 
 		break;
@@ -337,17 +340,17 @@ void process_item (int rectype, int reclen, char *rec) {
 				/*boolean*/
 				char buf[2]="0";
 				buf[0]+=rec[9];
-				*pcell=strdup(buf);
+				*pcell=(unsigned char *)strdup(buf);
 			} else if (rec[6]==2) {
 				/*error*/
 				char buf[6]="ERROR";
-				*pcell=strdup(buf);
+				*pcell=(unsigned char *)strdup(buf);
 			} else if (rec[6]==0) {
 				saved_reference=pcell;
 			}   
 		} else {
 			int format_code=getshort(rec,4);
-			*pcell=strdup(format_double(rec,6,format_code));
+			*pcell=(unsigned char *)strdup(format_double(rec,6,format_code));
 		}		 
 		break;
 	}
@@ -415,23 +418,22 @@ void process_item (int rectype, int reclen, char *rec) {
 /*
  * Extracts string from sst and returns mallocked copy of it
  */
-char *copy_unicode_string (unsigned char **src) {
+unsigned char *copy_unicode_string (unsigned char **src) {
 	int count=0;
 	int flags = 0;
 	int start_offset=0;
-	int to_skip=0;								/* используется для подсчета длины данных
-																 * за концом строки */
-	int offset = 1;								/* для учета переменной длины первого поля  */
+	int to_skip=0;	/* Used to counmt data after end of string */ 
+	int offset = 1;	/* Variable length of the first field  */
 	int charsize;
 	/* 	char *realstart=*src; */
-	char *dest;										/* куда будем копировать строку */
-	char *s,*d,*c;
+	unsigned char *dest;/* where to copy string */
+	unsigned char *s,*d,*c;
 
 	int i,u,l,len;
 
 	/* 	for(i=0;i<20;i++) */
 	/* 		fprintf(stderr,"%02x ",(*src)[i]); */
-	/* 	fprintf(stderr,"\n"); */
+		/* 	fprintf(stderr,"\n"); */
 
 	flags = *(*src+1+offset);
 	if (! ( flags == 0 || flags == 1 || flags == 8 || flags == 9 ||
@@ -439,7 +441,6 @@ char *copy_unicode_string (unsigned char **src) {
 		count=**src;
 		flags = *(*src+offset);
 		offset --;
-		flags = *(*src+1+offset);
 		if (! ( flags == 0 || flags == 1 || flags == 8 || flags == 9 ||
 						flags == 4 || flags == 5 || flags == 0x0c || flags == 0x0d ) ) {
 			/* 			fprintf(stderr,"Strange flags = %d, returning NULL\n", flags); */
@@ -500,7 +501,7 @@ char *copy_unicode_string (unsigned char **src) {
 		}
 		if ( charsize == 2 ){
 			u=(unsigned short)getshort(s,0);
-			c=convert_char(u);
+			c=(unsigned char *)convert_char(u);
 			/* 			fprintf(stderr,"char=%02x %02x\n", *s, *(s+1)); */
 		} else {
 			if (!source_charset) {
@@ -509,17 +510,16 @@ char *copy_unicode_string (unsigned char **src) {
 				source_charset=read_charset(source_csname);
 			}	
 			u=(unsigned short)to_unicode(source_charset,(unsigned char)*s);
-			c=convert_char(u);
+			c=(unsigned char *)convert_char(u);
 		}
 		if (c != NULL) {
-			int dl = strlen(c);
+			int dl = strlen((char *)c);
 			while (l+dl>=len) {
 				len+=16;
 				dest=realloc(dest,len+1);
 			}
 			d=dest+l;
-			strcpy(d,c);
-			d+=dl;
+			strcpy((char *)d,(char *)c);
 			l+=dl;
 		}      
 	}
@@ -543,20 +543,20 @@ int BuiltInDateFormatIdx (int index) {
 	/* 0 is used as false -- format not found */
 	if ((index>= 0x0E) && (index<=0x16)) {
 		return offset+index-0x0E;
-	} else 	
+	} else {
 		if ((index>=0x2d) && (index<=0x2F)) {
 			return offset+index-0x2d+9;
-		} else if (index==0xa4) {	
-			return 12+offset;
-		} else 	
+		} else { 	
 			return 0;
+		}
+	}
 }	
 
 /* 
  * GetBuiltInDateFormat stores and returns
  * built in xls2csv strftime formats.
  */
-#define NUMOFDATEFORMATS 13
+#define NUMOFDATEFORMATS 12
 char *GetBuiltInDateFormat(int dateindex) {
 	static char *formats[]={
 		/* reserved  */ NULL, /* BuiltInDateFormatIdx use dateindex=0 as flag format not found */
@@ -572,7 +572,9 @@ char *GetBuiltInDateFormat(int dateindex) {
 		/* 0x2d */ "%M:%S",		/* 10 */
 		/* 0x2e */ "%H:%M:%S",		/* 11 */
 		/* 0x2f */ "%M:%S",		/* 12 */
+#if 0
 		/* 0xa4 */ "%m.%d.%Y %l:%M:%S %p"	/* 13 */
+#endif
 	};
 	if (dateindex>0 && dateindex <= NUMOFDATEFORMATS) {
 	  return formats[dateindex];
@@ -584,8 +586,8 @@ static char FormatIdxUsed[NUMOFDATEFORMATS];
 
 void CleanUpFormatIdxUsed() {
 	int i;
-	for (i=0;i<NUMOFDATEFORMATS; i++);
-	FormatIdxUsed[i]=0;
+	for (i=0;i<NUMOFDATEFORMATS; i++)
+		FormatIdxUsed[i]=0;
 }
 
 /* 
@@ -681,10 +683,10 @@ char *number2string(double d,short int format_code) {
 	return buffer;
 }
 		
-char *format_double(char *rec,int offset,int format_code) {	
-	union { char cc[8];
+char *format_double(unsigned char *rec,int offset,int format_code) {	
+	union { unsigned char cc[8];
 		double d;} dconv;
-	char *d,*s; 
+	unsigned char *d,*s; 
 	int i;
 # ifdef WORDS_BIGENDIAN     
 	for(s=rec+offset+8,d=dconv.cc,i=0;
@@ -707,7 +709,7 @@ char *format_int(int value,int format_code) {
 /*
  * Formats RK record
  */
-char* format_rk(char *rec,short int format_code) {
+char* format_rk(unsigned char *rec,short int format_code) {
 	double value=0.0;
 	int i;
 
@@ -716,19 +718,19 @@ char* format_rk(char *rec,short int format_code) {
 		value=(double)(getlong(rec,0)>>2);
 	}
 	else { 
-		union { char cc[8];
+		union { unsigned char cc[8];
 			double d;} dconv;
-		char *d,*s;
+		unsigned char *d,*s;
 		for(i=0;i<8;i++)
 			dconv.cc[i]='\0';
 # ifdef WORDS_BIGENDIAN     
 		for(s=rec+4,d=dconv.cc,i=0; i<4;i++) 
 			*(d++)=*(--s);
-		dconv.cc[0]=dconv.cc[0] & 0xfc;
+		dconv.cc[3]=dconv.cc[3] & 0xfc;
 # else       
 		for(s=rec,d=dconv.cc+4,i=0;
 				i<4;i++) *(d++)=*(s++);
-		dconv.cc[3]=dconv.cc[3] & 0xfc;
+		dconv.cc[4]=dconv.cc[4] & 0xfc;
 # endif     
 		value=dconv.d;
 	}
@@ -753,14 +755,14 @@ time_t float2date(double f) {
 /*
  * Parses SST into array of strings
  */
-void parse_sst(char *sstbuf,int bufsize) {
+void parse_sst(unsigned char *sstbuf,int bufsize) {
 	int i; /* index into sst */
 	unsigned char *curString; /* pointer into unparsed buffer*/
 	unsigned char *barrier=(unsigned char *)sstbuf+bufsize; /*pointer to end of buffer*/
 	unsigned char **parsedString;/*pointer into parsed array*/ 
 			
 	sstsize = getlong(sstbuf+4,0);
-	sst=malloc(sstsize*sizeof(char *));
+	sst=(unsigned char **)malloc(sstsize*sizeof(unsigned char *));
 	
 	if (sst == NULL) {
 		perror("SST allocation error");

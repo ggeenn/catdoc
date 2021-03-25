@@ -30,6 +30,7 @@ double date_shift = 25569.0;
 #define MK_FORMAT(x) FLT_FORMAT("%.",x,"g") 			
 char number_format[8]=MK_FORMAT(DBL_DIG);
 
+void raise_error(const char* reason);
 void CleanUpFormatIdxUsed(void);
 
 void do_table(FILE *input,char *filename) {    
@@ -75,7 +76,7 @@ void do_table(FILE *input,char *filename) {
 				itemsread=catdoc_read(rec,reclen-offset,1,input);
 				break;
 			} else {
-				fprintf(stderr,"%s: Invalid BOF record\n",filename);
+				raise_error(" Invalid BOF record\n");// , filename);
 				return;
 			} 
 		} else {
@@ -83,8 +84,8 @@ void do_table(FILE *input,char *filename) {
 		}
 	}
 	if (catdoc_eof(input)) {
-		fprintf(stderr,"%s: No BOF record found\n",filename);
-		exit(1);
+		raise_error("No BOF record found\n");// , filename);
+		//exit(1);
 	}    
 	while(itemsread){
 		unsigned char buffer[2];
@@ -143,8 +144,8 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	}	
 	switch (rectype) {
 	case FILEPASS: {
-		fprintf(stderr,"File is encrypted\n");
-		exit(69);
+		raise_error("File is encrypted\n");
+		//exit(69);
 		break;
 	}
 	case WRITEPROT: 
@@ -252,16 +253,16 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		unsigned char **pcell;
 		int string_no=getshort(rec,6);
 		if (!sst) {
-			fprintf(stderr,"CONSTANT_STRING before SST parsed\n");
-			exit(1);
+			raise_error("CONSTANT_STRING before SST parsed\n");
+			//exit(1);
 		}    
 		/* 									fprintf(stderr,"col=%d row=%d no=%d\n",col,row,string_no); */
 									
 		saved_reference=NULL;
 		pcell=allocate(row,col);
 		if (string_no>=sstsize|| string_no < 0 ) {
-			fprintf(stderr,"string index out of boundary\n"); 
-			exit(1);	 
+			raise_error("string index out of boundary\n");
+			//exit(1);	 
 		} else if (sst[string_no] !=NULL) {	
 			int len;
 			unsigned char *outptr;
@@ -285,7 +286,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		row = getshort(rec,0)-startrow; 
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
-		*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
+		*pcell=(unsigned char *)_strdup(format_double(rec,6,getshort(rec,4)));
 		break;
 	}
 	case INTEGER_CELL: {
@@ -295,7 +296,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		row = getshort(rec,0)-startrow;
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
-		*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));		  
+		*pcell=(unsigned char *)_strdup(format_int(getshort(rec,7),getshort(rec,4)));		  
 		break;
 
 	}				  
@@ -308,7 +309,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
 		format_code = getshort(rec,4);
-		*pcell=(unsigned char *)strdup(format_rk(rec+6,format_code));
+		*pcell=(unsigned char *)_strdup(format_rk(rec+6,format_code));
 		break;
 	}
 	case MULRK: {
@@ -322,7 +323,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		for (offset=4,col=startcol;col<=endcol;offset+=6,col++) { 
 			pcell=allocate(row,col);
 			format_code=getshort(rec,offset);
-			*pcell=(unsigned char *)strdup(format_rk(rec+offset+2,format_code));
+			*pcell=(unsigned char *)_strdup(format_rk(rec+offset+2,format_code));
 
 		}		 
 		break;
@@ -340,24 +341,24 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 				/*boolean*/
 				char buf[2]="0";
 				buf[0]+=rec[9];
-				*pcell=(unsigned char *)strdup(buf);
+				*pcell=(unsigned char *)_strdup(buf);
 			} else if (rec[6]==2) {
 				/*error*/
 				char buf[6]="ERROR";
-				*pcell=(unsigned char *)strdup(buf);
+				*pcell=(unsigned char *)_strdup(buf);
 			} else if (rec[6]==0) {
 				saved_reference=pcell;
 			}   
 		} else {
 			int format_code=getshort(rec,4);
-			*pcell=(unsigned char *)strdup(format_double(rec,6,format_code));
+			*pcell=(unsigned char *)_strdup(format_double(rec,6,format_code));
 		}		 
 		break;
 	}
 	case STRING: {
 		unsigned char *src=(unsigned char *)rec;
 		if (!saved_reference) {
-			fprintf(stderr,"String record without preceeding string formula\n");
+			raise_error(stderr,"String record without preceeding string formula\n");
 			break;
 		}
 		*saved_reference=copy_unicode_string(&src);
@@ -365,7 +366,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	}	    
 	case BOF: {
 		if (rowptr) {
-			fprintf(stderr,"BOF when current sheet is not flushed\n");
+			//fprintf(stderr,"BOF when current sheet is not flushed\n");
 			free_sheet();
 		}
 		break;
@@ -380,8 +381,8 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 														(formatTableSize+=16)*sizeof(short int));
 					  	  
 				if (!formatTable) {
-					fprintf(stderr,"Out of memory for format table");
-					exit (1);
+					raise_error("Out of memory for format table");
+					//exit (1);
 				}	  
 			}	
 			formatTable[formatTableIndex++] = formatIndex;
@@ -505,7 +506,7 @@ unsigned char *copy_unicode_string (unsigned char **src) {
 			/* 			fprintf(stderr,"char=%02x %02x\n", *s, *(s+1)); */
 		} else {
 			if (!source_charset) {
-				check_charset(&source_csname,source_csname);	
+				//check_charset(&source_csname,source_csname);	
 				/* fprintf(stderr,"charset=%s\n",source_csname);*/
 				source_charset=read_charset(source_csname);
 			}	
@@ -646,13 +647,13 @@ char *isDateFormat(int format_code) {
 	int index;
 	int dateindex;
 	if (format_code>=formatTableIndex) {
-		fprintf(stderr,"Format code %d is used before definition\n",format_code);
+		//fprintf(stderr,"Format code %d is used before definition\n",format_code);
 		return NULL;
 	}
 	
 	index = formatTable[format_code];
 	if (IsFormatIdxUsed(index)) {
-		fprintf(stderr,"Format %x is redefined\n",index);
+		//fprintf(stderr,"Format %x is redefined\n",index);
 	  /* this format is something user-defined --- not a standard built-in date*/
 	  return NULL;
 	}

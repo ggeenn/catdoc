@@ -228,12 +228,12 @@ void get_locale_charset(void);
 void	set_time_locale();
 #endif	
 #endif
-SUBSTMAP read_substmap(char* filename);
+//SUBSTMAP read_substmap(char* filename);
 extern int longest_sequence;/* for checking which value of wrap_margin
                              can cause buffer overflow*/
 char *map_subst(SUBSTMAP map,int uc);
 
-int check_charset(char **filename,const char *charset);
+//int check_charset(char **filename,const char *charset);
 int process_file(FILE *f,long stop);
 void copy_out(FILE *f, char *header);
 void output_paragraph(unsigned short int *buffer) ;

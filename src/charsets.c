@@ -41,75 +41,75 @@ int from_unicode (CHARSET charset, int u) {
 /************************************************************************/
 /*  Converts direct (charset -> unicode) to reverse map                 */
 /************************************************************************/
-CHARSET make_reverse_map(short int *charset) {
-	CHARSET newmap=calloc(sizeof(short int *), 256);
-	int i,j,k,l;
-	short int *p;   
-	if (! charset) {
-		free(newmap);
-		return NULL;
-	}	
-	for (i=0;i<256;i++) {
-		k= charset[i];
-		j=  (unsigned)k>>8;
-		if (!newmap[j]) {
-			newmap[j] = (short int *)malloc(sizeof(short int)*256);
-			if (!newmap[j]) {
-				fprintf(stderr,"Insufficient memory for  charset\n");
-				exit(1);
-			}
-			for (l=0,p=newmap[j];l<256;l++,p++) *p=-1;
-		}
-		p=newmap[j];
-		p[k & 0xff]=i;
-	}
-	return newmap;
-}
+//CHARSET make_reverse_map(short int *charset) {
+//	CHARSET newmap=calloc(sizeof(short int *), 256);
+//	int i,j,k,l;
+//	short int *p;   
+//	if (! charset) {
+//		free(newmap);
+//		return NULL;
+//	}	
+//	for (i=0;i<256;i++) {
+//		k= charset[i];
+//		j=  (unsigned)k>>8;
+//		if (!newmap[j]) {
+//			newmap[j] = (short int *)malloc(sizeof(short int)*256);
+//			if (!newmap[j]) {
+//				fprintf(stderr,"Insufficient memory for  charset\n");
+//				exit(1);
+//			}
+//			for (l=0,p=newmap[j];l<256;l++,p++) *p=-1;
+//		}
+//		p=newmap[j];
+//		p[k & 0xff]=i;
+//	}
+//	return newmap;
+//}
 
 /************************************************************************/
 /* Reads charset file (as got from ftp.unicode.org) and returns array of*/
 /* 256 short ints (malloced) mapping from charset t unicode             */
 /************************************************************************/
-uint16_t * read_charset(const char *filename) {
-	char *path;
-	FILE *f;
-	uint16_t *new;
-	int c;
-	long int uc;
-	path= find_file(stradd(filename,CHARSET_EXT),charset_path);
-	if (!path) {
-		fprintf(stderr,"Cannot load charset %s - file not found\n",filename);
-		return NULL;
-	}
-	f=fopen(path,"rb");
-
-	if (!f) {
-		perror(path); 
-		return NULL;
-	}
-	if (input_buffer)
-		setvbuf(f,input_buffer,_IOFBF,FILE_BUFFER);
-	/* defaults */
-	new = calloc(sizeof(short int),256);
-	for (c=0;c<32;c++) {
-		new[c]=c;
-	}
-	while (!feof(f)) {
-		if (fscanf(f,"%i %li",&c,&uc)==2) {
-			if (c<0||c>255||uc<0||(uc>0xFEFE&& uc!=0xFFFE)) {
-				fprintf(stderr,"Invalid charset file %s\n",path);
-				fclose(f);
-				free(new);
-				return NULL;
-			}
-			new[c]=uc;
-		}
-		while((fgetc(f)!='\n')&&!feof(f)) ;
-	}
-	fclose (f);
-	free(path);
-	return new;
-}
+//uint16_t * read_charset(const char *filename) {
+//	char *path;
+//	FILE *f;
+//	uint16_t *new;
+//	int c;
+//	long int uc;
+//	path= find_file(stradd(filename,CHARSET_EXT),charset_path);
+//	if (!path) {
+//		fprintf(stderr,"Cannot load charset %s - file not found\n",filename);
+//		return NULL;
+//	}
+//	f=fopen(path,"rb");
+//
+//	if (!f) {
+//		perror(path); 
+//		return NULL;
+//	}
+//	if (input_buffer)
+//		setvbuf(f,input_buffer,_IOFBF,FILE_BUFFER);
+//	/* defaults */
+//	new = calloc(sizeof(short int),256);
+//	for (c=0;c<32;c++) {
+//		new[c]=c;
+//	}
+//	while (!feof(f)) {
+//		if (fscanf(f,"%i %li",&c,&uc)==2) {
+//			if (c<0||c>255||uc<0||(uc>0xFEFE&& uc!=0xFFFE)) {
+//				fprintf(stderr,"Invalid charset file %s\n",path);
+//				fclose(f);
+//				free(new);
+//				return NULL;
+//			}
+//			new[c]=uc;
+//		}
+//		while((fgetc(f)!='\n')&&!feof(f)) ;
+//	}
+//	fclose (f);
+//	free(path);
+//	return new;
+//}
 
 
 /************************************************************************/

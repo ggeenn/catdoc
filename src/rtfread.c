@@ -487,7 +487,7 @@ void rtfSetCharset(short int **charset_ptr,unsigned int codepage)
 	char *save_buf = input_buffer;
 	if (forced_charset) return;
 	charset_name = charset_from_codepage(codepage);
-	check_charset(&source_csname,charset_name);
+	//check_charset(&source_csname,charset_name);
 	input_buffer=NULL;
 	*charset_ptr = read_charset(source_csname);	
 	input_buffer = save_buf;

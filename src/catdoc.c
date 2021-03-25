@@ -186,7 +186,7 @@ int _argc;
 /************************************************************************/
 /* Displays  help message                                               */
 /************************************************************************/
-void help (void) {
-	printf("Usage:\n catdoc [-vu8btawxlV] [-m number] [-s charset] "
-			"[-d charset] [ -f format] files\n");
-}
+//void help (void) {
+//	printf("Usage:\n catdoc [-vu8btawxlV] [-m number] [-s charset] "
+//			"[-d charset] [ -f format] files\n");
+//}

@@ -32,6 +32,10 @@
 #define EX_OBJ_LIST     1033
 #define PPDRAWING_GROUP 1035
 #define PPDRAWING       1036
+#define STYLE_XML       1039
+#define ZIPPED_CONTENT0 1054
+#define ZIPPED_CONTENT1 1059
+#define ZIPPED_CONTENT2 1064
 #define LIST            2000
 #define COLOR_SCHEME_ATOM 2032
 #define TEXT_HEADER_ATOM 3999
@@ -53,7 +57,11 @@
 #define PROG_STRING_TAG 5001
 #define PROG_BINARY_TAG 5002
 #define PERSIST_PTR_INCREMENTAL_BLOCK 6002
-/* #define  */
+#define PPDRAWING_FRAME2 0xF002
+#define PPDRAWING_FRAME3 0xF003
+#define PPDRAWING_FRAME4 0xF004
+#define PPDRAWING_FRAME_STR 0xF00D
+ /* #define  */
 /* #define  */
 /* #define  */
 /* #define  */

@@ -23,6 +23,7 @@
 #include <glob.h>
 #endif
 
+void raise_error(const char* reason);
 
 /************************************************************************/
 /*  Copies component of string starting with p and ending one char      */
@@ -84,9 +85,9 @@ char *find_file(char *name, const char *path)
 		if (strlen(path_buf)+strlen(name)>=PATH_BUF_SIZE) 
 			continue; /* Ignore too deeply nested directories */
 		strcat(path_buf,name);
-		if (access(path_buf,0)==0) {
+		if (_access(path_buf,0)==0) {
 			free(name); 
-			return strdup(path_buf);
+			return _strdup(path_buf);
 		}
 	}
 	/* if we are here, nothing found */
@@ -99,23 +100,23 @@ char *find_file(char *name, const char *path)
 /* of its name into first arg if found. Otherwise leaves first arg      */
 /*  unchanged. Returns non-zero on success                              */ 
 /************************************************************************/
-int check_charset(char **filename,const char *charset) {
-	char *tmppath;
-	if (charset == NULL ) {
-		return 0;
-	}
-	if (!strncmp(charset,"utf-8",6)) {
-		*filename=strdup("utf-8");
-		return 1;
-	}   
-	tmppath=find_file(stradd(charset,CHARSET_EXT),charset_path);
-	if (tmppath && *tmppath) {
-			*filename=strdup(charset);
-			free(tmppath);
-			return 1;
-	} 
-	return 0;
-}
+//int check_charset(char **filename,const char *charset) {
+//	char *tmppath;
+//	if (charset == NULL ) {
+//		return 0;
+//	}
+//	if (!strncmp(charset,"utf-8",6)) {
+//		*filename=strdup("utf-8");
+//		return 1;
+//	}   
+//	tmppath=find_file(stradd(charset,CHARSET_EXT),charset_path);
+//	if (tmppath && *tmppath) {
+//			*filename=strdup(charset);
+//			free(tmppath);
+//			return 1;
+//	} 
+//	return 0;
+//}
 
 /**********************************************************************/
 /*  Returns malloced string containing concatenation of two           */
@@ -125,8 +126,8 @@ char *stradd(const char *s1,const char *s2)
 { char *res;
 	res=malloc(strlen(s1)+strlen(s2)+1);
 	if (!res) {
-		fprintf (stderr,"Out of memory!");
-		exit(1);
+		raise_error("Out of memory!");
+		//exit(1);
 	}
 	strcpy(res,s1);
 	strcat(res,s2);
@@ -152,24 +153,24 @@ char *exe_dir(void) {
 	}
 	return pathbuf;
 }
-char *add_exe_path(const char *name) {
-	static char path[PATH_BUF_SIZE];
-	char *mypath=exe_dir();
-	/* No snprintf in Turbo C 2.0 library, so just check by hand
-	   and exit if something goes wrong */
-	if (strchr(name,'%')) {
-		/* there is substitution */
-		if (strlen(name)-1+strlen(mypath)>=PATH_BUF_SIZE) {
-			fprintf(stderr,"Invalid config file. file name \"%s\" too long "
-					"after substitution\n",name);
-			exit(1);
-		}   
-		sprintf(path,name,exe_dir());
-		return path;
-	} else {
-		return name;
-	}  
-}
+//char *add_exe_path(const char *name) {
+//	static char path[PATH_BUF_SIZE];
+//	char *mypath=exe_dir();
+//	/* No snprintf in Turbo C 2.0 library, so just check by hand
+//	   and exit if something goes wrong */
+//	if (strchr(name,'%')) {
+//		/* there is substitution */
+//		if (strlen(name)-1+strlen(mypath)>=PATH_BUF_SIZE) {
+//			fprintf(stderr,"Invalid config file. file name \"%s\" too long "
+//					"after substitution\n",name);
+//			exit(1);
+//		}   
+//		sprintf(path,name,exe_dir());
+//		return path;
+//	} else {
+//		return name;
+//	}  
+//}
 #endif 
 /*********************************************************************/
 /* Prints out list of available charsets, i.e. names without extension *

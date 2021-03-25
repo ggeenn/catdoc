@@ -22,8 +22,10 @@
 
 #include "catdoc.h"
 
+#undef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+void raise_error(const char* reason);
 long int sectorSize, shortSectorSize;
 /* BBD Info */
 long int  bbdNumBlocks;
@@ -100,7 +102,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		return NULL;
 	}
 	if (strncmp((char *)&oleBuf,zip_sign,4) == 0) {
-		fprintf(stderr,"Looks like ZIP archive or Office 2007 or later. Not supported\n");
+		raise_error("Looks like ZIP archive or Office 2007 or later. Not supported\n");
 		return NULL;
 	} else if (strncmp((char *)&oleBuf,ole_sign,8) != 0) {
 		return NULL;
@@ -149,8 +151,8 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		fseek(newfile, 512+mblock*sectorSize, SEEK_SET);
 		if(fread(tmpBuf+MSAT_ORIG_SIZE+(sectorSize-4)*i,
 						 1, sectorSize, newfile) != sectorSize) {
-			fprintf(stderr, "Error read MSAT!\n");
 			ole_finish();
+			raise_error("Error read MSAT!\n");
 			return NULL;
 		}
 
@@ -163,15 +165,15 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		long int bbdSector=getlong(tmpBuf,4*i);
 
 		if (bbdSector >= fileLength/sectorSize || bbdSector < 0) {
-			fprintf(stderr, "Bad BBD entry!\n");
 			ole_finish();
+			raise_error("Bad BBD entry!\n");
 			return NULL;
 		}
 		fseek(newfile, 512+bbdSector*sectorSize, SEEK_SET);
 		if ( fread(BBD+i*sectorSize, 1, sectorSize, newfile) != sectorSize ) {
-			fprintf(stderr, "Can't read BBD!\n");
 			free(tmpBuf);
 			ole_finish();
+			raise_error("Can't read BBD!\n");
 			return NULL;
 		}
 	}
@@ -278,7 +280,8 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 	propCurNumber = 0;
 	fseek(newfile, 0, SEEK_SET);
 	if (!rootEntry) {
-		fprintf(stderr,"Broken OLE structure. Cannot find root entry in this file!\n");		ole_finish();
+		ole_finish();
+		raise_error("Broken OLE structure. Cannot find root entry in this file!\n");
 		return NULL;
 	}
 	return newfile;

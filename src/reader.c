@@ -194,7 +194,7 @@ int process_file(FILE *f,long stop) {
  **********************************************************************/ 
 int get_word8_char(FILE *f,long *offset,long fileend) {
 	int count,i,u;
-	char c;
+	unsigned char c;
 	if ((i=(*offset)%256) ==0) {
 		count=catdoc_read(read_buf,1,256,f);
 		memset(read_buf+count,0,256-count);

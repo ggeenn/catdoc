@@ -87,15 +87,6 @@ void do_ppt(FILE *input,char *filename) {
 static void process_item (int rectype, long reclen, FILE* input) {
 	int i=0, u;
 	static unsigned char buf[2];
-	// -------
-	fprintf(stderr, "Processing record %d length %d\n", rectype, reclen);
-	if (MAIN_MASTER == rectype || DOCUMENT == rectype)
-		return;
-	char* p = malloc(reclen);
-	int itemsread = catdoc_read(p, reclen, 1, input);
-	free(p);
-	return;
-	// -------
 /*	fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
  *	*/
 	switch(rectype) {
@@ -203,7 +194,7 @@ static void process_item (int rectype, long reclen, FILE* input) {
 
 	case PPDRAWING:
 /* 		fprintf(stderr,"PPDrawing, reclen=%ld\n", reclen); */
-		catdoc_seek(input, reclen, SEEK_CUR);
+		//catdoc_seek(input, reclen, SEEK_CUR);
 		break;
 
 	case ENVIRONMENT:
@@ -306,6 +297,30 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		fprintf(stderr,", reclen=%ld\n", reclen);
 		catdoc_seek(input, reclen, SEEK_CUR);
 		break;*/
+
+	case PPDRAWING_FRAME2:
+		break;
+	case PPDRAWING_FRAME3:
+		break;
+	case PPDRAWING_FRAME4:
+		break;
+
+	case PPDRAWING_FRAME_STR: {
+		char* buf = malloc(reclen);
+		int res;
+		uint32_t len = 0;
+		res = catdoc_read(buf, 1, reclen, input);
+		if (res == reclen)
+		{
+			len = getulong(buf, 16);
+			if(20 + len < reclen)
+				buf[20 + len] = 0;
+			print_value(buf + 20);
+		}
+		free(buf);
+
+	}
+		break;
 
 	default:
 /* 		fprintf(stderr,"Default action for rectype=%d reclen=%ld\n", */

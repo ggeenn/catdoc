@@ -358,7 +358,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	case STRING: {
 		unsigned char *src=(unsigned char *)rec;
 		if (!saved_reference) {
-			raise_error(stderr,"String record without preceeding string formula\n");
+			raise_error("String record without preceeding string formula\n");
 			break;
 		}
 		*saved_reference=copy_unicode_string(&src);

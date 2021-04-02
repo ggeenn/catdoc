@@ -1,3 +1,6 @@
+Forked from petewarden/catdoc, and CMakeLists.txt was added. It is buildable on windows and mac.
+Original description is bellow :
+
 CATDOC version 0.93
 
 CATDOC is program which reads MS-Word file and prints readable 

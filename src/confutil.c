@@ -7,7 +7,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <unistd.h>
+//#include <unistd.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>

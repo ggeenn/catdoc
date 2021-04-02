@@ -1,4 +1,50 @@
-Forked from petewarden/catdoc, and CMakeLists.txt was added. It is buildable on windows and mac.
+Forked from petewarden/catdoc,
+AND :
+1. CMakeLists.txt was added.
+2. It is buildable on windows and mac.
+3. It is a library - there is no main() anymore.
+4. Charsets were hardcoded in charsets_bin.c, you haven't read files from charsets/ folder.
+5. A lot of global variables, to use in multithreading environment please use mutex.
+6. To build, define callbacks in your code (see usage bellow)
+
+USAGE :
+
+#define _CRT_SECURE_NO_WARNINGS
+extern "C" { #include <catdoc.h> }
+std::mutex gCatdocMtx;
+std::string gCatdocContent;
+extern "C" void output_paragraph(unsigned short int* buffer)// MS Doc handler
+{
+    std::string utf8 = boost::locale::conv::utf_to_utf<char, wchar_t>(
+        reinterpret_cast<const wchar_t*>(buffer));
+    gCatdocContent += utf8;
+}
+extern "C" void print_value(unsigned char* value)// MS Xls & Ppt handler
+{
+    gCatdocContent += reinterpret_cast<const char*>(value);
+}
+extern "C" void raise_error(const char* reason)
+{
+    throw std::runtime_error(reason);
+}
+std::string getTextContent(const fs::path& path)
+{
+    FILE* file = std::fopen(path.string().c_str(), "rb");
+    // check file handle and guard it somehow you like to call std::fclose(file)
+
+    std::scoped_lock<std::mutex> lck(gCatdocMtx);
+    gCatdocContent.clear();
+
+    set_std_func();
+    if (!source_charset)
+        source_charset = read_charset(source_csname);
+
+    int res = analyze_format(file, (char*)path.string().c_str());
+    // check error here
+
+    return gCatdocContent;
+}
+
 Original description is bellow :
 
 CATDOC version 0.93

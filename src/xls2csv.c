@@ -16,7 +16,7 @@
 #include "xltypes.h"
 #include "catdoc.h"
 #include <stdlib.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include "catdoc.h"
 #include "float.h"
 #include "xls.h"

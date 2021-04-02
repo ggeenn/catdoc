@@ -286,7 +286,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		row = getshort(rec,0)-startrow; 
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
-		*pcell=(unsigned char *)_strdup(format_double(rec,6,getshort(rec,4)));
+		*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
 		break;
 	}
 	case INTEGER_CELL: {
@@ -296,7 +296,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		row = getshort(rec,0)-startrow;
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
-		*pcell=(unsigned char *)_strdup(format_int(getshort(rec,7),getshort(rec,4)));		  
+		*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));
 		break;
 
 	}				  
@@ -309,7 +309,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		col = getshort(rec,2);
 		pcell=allocate(row,col);
 		format_code = getshort(rec,4);
-		*pcell=(unsigned char *)_strdup(format_rk(rec+6,format_code));
+		*pcell=(unsigned char *)strdup(format_rk(rec+6,format_code));
 		break;
 	}
 	case MULRK: {
@@ -323,7 +323,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		for (offset=4,col=startcol;col<=endcol;offset+=6,col++) { 
 			pcell=allocate(row,col);
 			format_code=getshort(rec,offset);
-			*pcell=(unsigned char *)_strdup(format_rk(rec+offset+2,format_code));
+			*pcell=(unsigned char *)strdup(format_rk(rec+offset+2,format_code));
 
 		}		 
 		break;
@@ -341,17 +341,17 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 				/*boolean*/
 				char buf[2]="0";
 				buf[0]+=rec[9];
-				*pcell=(unsigned char *)_strdup(buf);
+				*pcell=(unsigned char *)strdup(buf);
 			} else if (rec[6]==2) {
 				/*error*/
 				char buf[6]="ERROR";
-				*pcell=(unsigned char *)_strdup(buf);
+				*pcell=(unsigned char *)strdup(buf);
 			} else if (rec[6]==0) {
 				saved_reference=pcell;
 			}   
 		} else {
 			int format_code=getshort(rec,4);
-			*pcell=(unsigned char *)_strdup(format_double(rec,6,format_code));
+			*pcell=(unsigned char *)strdup(format_double(rec,6,format_code));
 		}		 
 		break;
 	}

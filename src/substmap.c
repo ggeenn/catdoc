@@ -154,7 +154,7 @@ char * map_subst ( SUBSTMAP map, int uc) {
 	//return p[uc & 0xff];
 	static unsigned char buf[2] = "A";
 	buf[0] = uc & 0xff;
-	return buf;
+	return (char*)buf;
 }
 
 /*************************************************************************/

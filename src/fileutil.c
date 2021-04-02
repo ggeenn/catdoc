@@ -68,30 +68,31 @@ int prepare_path_buf(char *path_buf, const char *start, const char *end) {
 /* appropriate   Expects name to be dynamically allocated and frees it  */
 /************************************************************************/
 char *find_file(char *name, const char *path)
-{ const char *p;
-	char *q;
-	char path_buf[PATH_BUF_SIZE];
-	char dir_sep[2]={DIR_SEP,0};
-	for (p=path;p;p=(q?(q+1):NULL)) {
-		q=strchr(p,LIST_SEP);
-
-		if (q) {
-			if (!prepare_path_buf(path_buf,p,q)) continue;
-		} else {
-
-			if (!prepare_path_buf(path_buf,p,p+strlen(p))) continue;
-		}
-		strcat(path_buf,dir_sep); /* always one char */
-		if (strlen(path_buf)+strlen(name)>=PATH_BUF_SIZE) 
-			continue; /* Ignore too deeply nested directories */
-		strcat(path_buf,name);
-		if (_access(path_buf,0)==0) {
-			free(name); 
-			return _strdup(path_buf);
-		}
-	}
-	/* if we are here, nothing found */
-	free(name); 
+{
+//    const char *p;
+//	char *q;
+//	char path_buf[PATH_BUF_SIZE];
+//	char dir_sep[2]={DIR_SEP,0};
+//	for (p=path;p;p=(q?(q+1):NULL)) {
+//		q=strchr(p,LIST_SEP);
+//
+//		if (q) {
+//			if (!prepare_path_buf(path_buf,p,q)) continue;
+//		} else {
+//
+//			if (!prepare_path_buf(path_buf,p,p+strlen(p))) continue;
+//		}
+//		strcat(path_buf,dir_sep); /* always one char */
+//		if (strlen(path_buf)+strlen(name)>=PATH_BUF_SIZE) 
+//			continue; /* Ignore too deeply nested directories */
+//		strcat(path_buf,name);
+//		if (access(path_buf,0)==0) {
+//			free(name); 
+//			return strdup(path_buf);
+//		}
+//	}
+//	/* if we are here, nothing found */
+//	free(name); 
 	return NULL;
 }
 

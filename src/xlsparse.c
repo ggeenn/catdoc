@@ -30,7 +30,7 @@ double date_shift = 25569.0;
 #define MK_FORMAT(x) FLT_FORMAT("%.",x,"g") 			
 char number_format[8]=MK_FORMAT(DBL_DIG);
 
-void raise_error(const char* reason);
+void catdoc_raise_error(const char* reason);
 void CleanUpFormatIdxUsed(void);
 
 void do_table(FILE *input,char *filename) {    
@@ -76,7 +76,7 @@ void do_table(FILE *input,char *filename) {
 				itemsread=catdoc_read(rec,reclen-offset,1,input);
 				break;
 			} else {
-				raise_error(" Invalid BOF record\n");// , filename);
+				catdoc_raise_error(" Invalid BOF record");// , filename);
 				return;
 			} 
 		} else {
@@ -84,7 +84,7 @@ void do_table(FILE *input,char *filename) {
 		}
 	}
 	if (catdoc_eof(input)) {
-		raise_error("No BOF record found\n");// , filename);
+		catdoc_raise_error("No BOF record found");// , filename);
 		//exit(1);
 	}    
 	while(itemsread){
@@ -144,7 +144,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	}	
 	switch (rectype) {
 	case FILEPASS: {
-		raise_error("File is encrypted\n");
+		catdoc_raise_error("File is encrypted");
 		//exit(69);
 		break;
 	}
@@ -253,7 +253,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		unsigned char **pcell;
 		int string_no=getshort(rec,6);
 		if (!sst) {
-			raise_error("CONSTANT_STRING before SST parsed\n");
+			catdoc_raise_error("CONSTANT_STRING before SST parsed");
 			//exit(1);
 		}    
 		/* 									fprintf(stderr,"col=%d row=%d no=%d\n",col,row,string_no); */
@@ -261,7 +261,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		saved_reference=NULL;
 		pcell=allocate(row,col);
 		if (string_no>=sstsize|| string_no < 0 ) {
-			raise_error("string index out of boundary\n");
+			catdoc_raise_error("string index out of boundary");
 			//exit(1);	 
 		} else if (sst[string_no] !=NULL) {	
 			int len;
@@ -358,7 +358,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	case STRING: {
 		unsigned char *src=(unsigned char *)rec;
 		if (!saved_reference) {
-			raise_error("String record without preceeding string formula\n");
+			catdoc_raise_error("String record without preceeding string formula");
 			break;
 		}
 		*saved_reference=copy_unicode_string(&src);
@@ -381,7 +381,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 														(formatTableSize+=16)*sizeof(short int));
 					  	  
 				if (!formatTable) {
-					raise_error("Out of memory for format table");
+					catdoc_raise_error("Out of memory for format table");
 					//exit (1);
 				}	  
 			}	

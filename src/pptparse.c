@@ -21,7 +21,7 @@
 #include "catdoc.h"
 #include "ppttypes.h"
 
-void print_value(unsigned char* value);
+void catdoc_output_chars(unsigned char* buffer, size_t bufferSz);
 
 char *slide_separator = "\f"; 
 
@@ -44,7 +44,7 @@ enum {START_FILE,START_SLIDE,TEXTOUT,END_FILE} slide_state ;
 
 static void start_text_out(void) {
 	if (slide_state == START_SLIDE) {
-		print_value(" ");// fputs(slide_separator, stdout);
+		catdoc_output_chars(" ", 1);// fputs(slide_separator, stdout);
 	}
 	slide_state = TEXTOUT;
 }	
@@ -87,14 +87,14 @@ void do_ppt(FILE *input,char *filename) {
 static void process_item (int rectype, long reclen, FILE* input) {
 	int i=0, u;
 	static unsigned char buf[2];
-/*	fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
- *	*/
+	fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
+ 
 	switch(rectype) {
 	case DOCUMENT_END:
 /* 		fprintf(stderr,"End of document, ended at %ld\n",catdoc_tell(input)); */
 		catdoc_seek(input, reclen, SEEK_CUR);
 		if (slide_state == TEXTOUT) {
-			print_value(" "); //fputs(slide_separator,stdout);
+			catdoc_output_chars(" ", 1); //fputs(slide_separator,stdout);
 			slide_state = END_FILE;
 		}	
 		break;
@@ -155,9 +155,9 @@ static void process_item (int rectype, long reclen, FILE* input) {
 			for(i=0; i < reclen; i++) {
 				catdoc_read(buf,1,1,input);
 				if ((unsigned char)*buf != 0x0d)
-					print_value(convert_char((unsigned char)*buf));// fputs(convert_char((unsigned char)*buf), stdout);
+					catdoc_output_chars(convert_char((unsigned char)*buf), 1);// fputs(convert_char((unsigned char)*buf), stdout);
 				else
-					print_value(" "); //fputc('\n', stdout);
+					catdoc_output_chars(" ", 1); //fputc('\n', stdout);
 			}
 			//fputc('\n',stdout);
 		}
@@ -165,21 +165,17 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		
 	case TEXT_CHARS_ATOM: 
 	case CSTRING: {
-			long text_len;
-			
-/* 			fprintf(stderr,"CString, reclen=%ld\n", reclen); */
-			start_text_out();
-			text_len=reclen/2;
-			for(i=0; i < text_len; i++) {
-				catdoc_read(buf,2,1,input);
-				u=(unsigned short)getshort(buf,0);
-				if (u != 0x0d)
-					print_value(convert_char(u)); //fputs(convert_char(u),stdout);
-				else
-					print_value(" ");// fputc('\n', stdout);
-			}
-			//fputc('\n',stdout);
+		uint16_t* buf = malloc(reclen);
+		start_text_out();
+		size_t actual = catdoc_read(buf, 1, reclen, input);
+		if (actual != reclen)
+		{
+			free(buf);
+			catdoc_raise_error("Wrong ppt CSTRING/ATOM size");
 		}
+		catdoc_output_wchars(buf, actual/2);
+		free(buf);
+	}
 		break;
 		
 	case USER_EDIT_ATOM:
@@ -298,27 +294,30 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		catdoc_seek(input, reclen, SEEK_CUR);
 		break;*/
 
-	case PPDRAWING_FRAME2:
+	case PPDRAWING_FRAME_2:
 		break;
-	case PPDRAWING_FRAME3:
+	case PPDRAWING_FRAME_3:
 		break;
-	case PPDRAWING_FRAME4:
+	case PPDRAWING_FRAME_4:
 		break;
 
-	case PPDRAWING_FRAME_STR: {
+	case PPDRAWING_FRAME_D: {
 		char* buf = malloc(reclen);
-		int res;
-		uint32_t len = 0;
-		res = catdoc_read(buf, 1, reclen, input);
-		if (res == reclen)
+		uint32_t res = catdoc_read(buf, 1, reclen, input);
+		if (res != reclen)
+			catdoc_raise_error("Wrong ppt PPDRAWING_FRAME_D size");
+
+		uint32_t type = getulong(buf, 12);
+		uint32_t subtype = getulong(buf, 8);
+		if (type == PPDRAWING_FRAME_D_TYPE_STR && subtype == PPDRAWING_FRAME_D_SUBTYPE_STR)
 		{
-			len = getulong(buf, 16);
-			if(20 + len < reclen)
-				buf[20 + len] = 0;
-			print_value(buf + 20);
+			uint32_t len = getulong(buf, 16);
+			if (20 + len <= reclen)
+			{
+				catdoc_output_chars(buf + 20, len);
+			}
 		}
 		free(buf);
-
 	}
 		break;
 

@@ -236,7 +236,7 @@ char *map_subst(SUBSTMAP map,int uc);
 //int check_charset(char **filename,const char *charset);
 int process_file(FILE *f,long stop);
 void copy_out(FILE *f, char *header);
-void output_paragraph(unsigned short int *buffer) ;
+void catdoc_output_wchars(wchar_t *buffer, size_t bufferSz) ;
 int parse_rtf(FILE *f);
 /* format recognition*/
 int analyze_format(FILE *f, char* filename);

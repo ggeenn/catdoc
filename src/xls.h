@@ -28,7 +28,7 @@ extern char cell_separator;
 extern int quote_mode;
 void print_sheet(void);
 void free_sheet(void);
-void print_value(unsigned char *value);
+void catdoc_output_chars(unsigned char *buffer, size_t bufferSz);
 char *format_double(unsigned char *rec,int offset,int format_code);
 char *format_int(int value,int format_code);
 char *format_rk(unsigned char *rec,short int format_code);

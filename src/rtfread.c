@@ -174,7 +174,7 @@ void add_to_buffer(int *bufptr,unsigned short int c) {
 	buffer[++(*bufptr)]=c;
 	if (*bufptr >= PARAGRAPH_BUFFER-2) {
 		buffer[++(*bufptr)]=0;
-		output_paragraph(buffer);
+		catdoc_output_wchars(buffer, *bufptr);
 		*bufptr=-1;
 	}
 }
@@ -182,7 +182,7 @@ void add_to_buffer(int *bufptr,unsigned short int c) {
 void end_paragraph(int *bufptr) {
 				   add_to_buffer(bufptr,0x000a);
 				   add_to_buffer(bufptr,0);
-				   output_paragraph(buffer);
+				   catdoc_output_wchars(buffer, *bufptr);
 				   *bufptr=-1;
 }				   
 
@@ -333,7 +333,7 @@ int parse_rtf(FILE *f) {
 				group_count=0;
 			if(para_mode > 0 && para_mode > group_count) {
  				/*add_to_buffer(&bufptr,0);
-				output_paragraph(buffer);
+				catdoc_output_wchars(buffer, bufptr);
 				fprintf(stderr,"\nGROUP_END para_mode=%d group_count=%d bufptr=%d\n", para_mode,group_count,bufptr);
 				bufptr=-1;*/
 				para_mode=0;
@@ -351,7 +351,7 @@ int parse_rtf(FILE *f) {
 	if (bufptr>=0) {
 		add_to_buffer(&bufptr,'\n');
 		add_to_buffer(&bufptr,0);
-		output_paragraph(buffer);
+		catdoc_output_wchars(buffer, bufptr);
 	}	
 	free(groups);
 	return 0;

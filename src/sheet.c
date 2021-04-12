@@ -73,7 +73,7 @@ void free_sheet(void) {
  * prints out one value with quoting
  * uses global variable quote_mode
  */ 
-//void print_value(unsigned char *value) 
+//void catdoc_output_chars(unsigned char *value) 
 //{
 //	int i,len;
 //	int quotes=0;
@@ -132,11 +132,11 @@ void print_sheet(void) {
 		if (row->cells) {
 			for (j=0,col=row->cells;j<=row->last;j++,col++) {
 				if (j){
-					print_value(" ");// fputc(cell_separator, stdout);
+					catdoc_output_chars(" ", 1);// fputc(cell_separator, stdout);
 					printed=1;
 				}
 				if (*col) {
-					print_value(*col);
+					catdoc_output_chars(*col, 1);
 					printed=1;
 				}
 			}

@@ -49,8 +49,8 @@ int analyze_format(FILE *f, char* filename) {
 	} else if (strncmp((char *)&buffer,rtf_sign,4)==0) {
 		return parse_rtf(f);
 	} else if (strncmp((char *)&buffer, zip_sign,4) == 0) {
-		raise_error("This file looks like ZIP archive or Office 2007 "
-		"or later file.\nNot supported by catdoc\n");
+		catdoc_raise_error("This file looks like ZIP archive or Office 2007 "
+		"or later file.(Not supported by catdoc)");
 		//exit(1);
 	} else if (strncmp((char *)&buffer,old_word_sign,2)==0) {
 	   fread(buffer+4,1,124,f);	
@@ -80,7 +80,7 @@ int analyze_format(FILE *f, char* filename) {
 			set_std_func();
 			ole_finish();
 		} else {
-			raise_error("Broken OLE file. Try using -b switch\n");
+			catdoc_raise_error("Broken OLE file. Try using -b switch");
 			//exit(1);
 		}	
 	} else {
@@ -157,7 +157,7 @@ int parse_word_header(unsigned char * buffer,FILE *f,int offset,long curpos) {
 		//} 
 	}
 	if (flags & fEncrypted) {
-		raise_error("[File is encrypted.");// Encryption key = % 08lx]\n",
+		catdoc_raise_error("[File is encrypted.");// Encryption key = % 08lx]\n",
 				//getlong(buffer,14));
 		return 69;
 	}
@@ -180,7 +180,7 @@ int parse_word_header(unsigned char * buffer,FILE *f,int offset,long curpos) {
 	for (i=0;i<textstart;i++) {
 		catdoc_read(buf, 1, 1, f);
 		if (catdoc_eof(f)) {
-			raise_error("File ended before textstart. Probably it is broken. Try -b switch\n");
+			catdoc_raise_error("File ended before textstart. Probably it is broken. Try -b switch");
 			//exit(1);
 		}
 	}    

@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "catdoc.h"
-void print_value(unsigned char* value);
+void catdoc_output_chars(unsigned char* buffer, size_t bufferSz);
 unsigned short int buffer[PARAGRAPH_BUFFER];
 static unsigned char read_buf[256];
 static int buf_is_unicode;
@@ -32,9 +32,9 @@ void copy_out (FILE *f,char *header) {
 		 */
 		if ((unsigned char)header[0]==0xFE && (unsigned char)header[1]==0xFF) {
 			get_unicode_char = get_utf16msb;
-			print_value/*fputs*/(convert_char((header[2]<<8)|header[3]));//,stdout); 
-			print_value/*fputs*/(convert_char((header[4]<<8)|header[5]));//,stdout); 
-			print_value/*fputs*/(convert_char((header[6]<<8)|header[7]));//,stdout); 
+			catdoc_output_chars/*fputs*/(convert_char((header[2]<<8)|header[3]), 1);//,stdout); 
+			catdoc_output_chars/*fputs*/(convert_char((header[4]<<8)|header[5]), 1);//,stdout); 
+			catdoc_output_chars/*fputs*/(convert_char((header[6]<<8)|header[7]), 1);//,stdout); 
 		} else if ((unsigned char)header[0]!=0xFF ||
 				(unsigned char)header[1]!=0xFE) {
 			int c,j,d;
@@ -61,27 +61,27 @@ void copy_out (FILE *f,char *header) {
 						c=(c<<6) | (d & 0x3F);
 					}
 				}
-				print_value/*fputs*/(convert_char(c));// , stdout);
+				catdoc_output_chars/*fputs*/(convert_char(c), 1);// , stdout);
 			}
 		} else {
 			get_unicode_char = get_utf16lsb;
-			print_value/*fputs*/(convert_char((header[3]<<8)|header[2]));//,stdout); 
-			print_value/*fputs*/(convert_char((header[5]<<8)|header[4]));//,stdout); 
-			print_value/*fputs*/(convert_char((header[7]<<8)|header[6]));//,stdout); 
+			catdoc_output_chars/*fputs*/(convert_char((header[3]<<8)|header[2]), 1);//,stdout); 
+			catdoc_output_chars/*fputs*/(convert_char((header[5]<<8)|header[4]), 1);//,stdout); 
+			catdoc_output_chars/*fputs*/(convert_char((header[7]<<8)|header[6]), 1);//,stdout); 
 		}	    
 		while (!catdoc_eof(f)) {
 			i=get_unicode_char(f,&offset,0x7FFFFFFF); 
-			if (i != EOF) print_value/*fputs*/(convert_char(i));// , stdout);
+			if (i != EOF) catdoc_output_chars/*fputs*/(convert_char(i), 1);// , stdout);
 		}    
 	} else {
 		for (i=0;i<8;i++) {
-			print_value/*fputs*/(convert_char(to_unicode(source_charset, (unsigned char)header[i])));// , stdout);
+			catdoc_output_chars/*fputs*/(convert_char(to_unicode(source_charset, (unsigned char)header[i])), 1);// , stdout);
 		}			 
 		/* Assuming 8-bit input text */
 		while ((count = catdoc_read(buf,1,PARAGRAPH_BUFFER,f))) {
 			for (i=0;i<count;i++) {
-				print_value/*fputs*/(convert_char(to_unicode(source_charset,
-					(unsigned char)buf[i])));// , stdout);
+				catdoc_output_chars/*fputs*/(convert_char(to_unicode(source_charset,
+					(unsigned char)buf[i])), 1);// , stdout);
 			}		       
 		}
 	} 
@@ -176,7 +176,7 @@ int process_file(FILE *f,long stop) {
 				 buffer[bufptr]!=0x000a);
 		if (bufptr>0) {
 			buffer[++bufptr]=0;
-			output_paragraph(buffer);
+			catdoc_output_wchars(buffer, bufptr);
 		}
 	}
 	return 0;

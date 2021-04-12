@@ -305,7 +305,10 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		char* buf = malloc(reclen);
 		uint32_t res = catdoc_read(buf, 1, reclen, input);
 		if (res != reclen)
+		{
+			free(buf);
 			catdoc_raise_error("Wrong ppt PPDRAWING_FRAME_D size");
+		}
 
 		uint32_t type = getulong(buf, 12);
 		uint32_t subtype = getulong(buf, 8);

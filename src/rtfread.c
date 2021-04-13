@@ -199,7 +199,7 @@ int parse_rtf(FILE *f) {
 	current_charset=source_charset;
 	fseek(f,0,SEEK_SET);
 	if((groups=(RTFGroupData*)calloc(group_store,sizeof(RTFGroupData))) == NULL ) {
-		perror("Can\'t allocate memory: ");
+		catdoc_raise_error("Can\'t allocate memory: ");
 		return 1;
 	}
 	groups[0].uc = 2; /* DEfault uc = 2 */
@@ -319,7 +319,7 @@ int parse_rtf(FILE *f) {
 				if((groups=(RTFGroupData*)realloc(groups,
 												  group_store*sizeof(RTFGroupData)))
 				   == NULL ) {
-					perror("Can\'t allocate memory: ");
+					catdoc_raise_error("Can\'t allocate memory: ");
 					return 1;
 				}
 			}

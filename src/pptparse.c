@@ -87,7 +87,7 @@ void do_ppt(FILE *input,char *filename) {
 static void process_item (int rectype, long reclen, FILE* input) {
 	int i=0, u;
 	static unsigned char buf[2];
-	fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
+	//fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
  
 	switch(rectype) {
 	case DOCUMENT_END:

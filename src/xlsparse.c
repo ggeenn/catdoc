@@ -126,22 +126,31 @@ void do_table(FILE *input,char *filename) {
 unsigned char **sst=NULL;/* Shared string table parsed into array of strings in
 														output encoding*/
 int sstsize = 0; /*Number of strings in SST*/
-unsigned char *sstBuffer=NULL; /*Unparsed sst to accumulate all its parts*/
-int sstBytes = 0; /*Size of SST Data, already accumulated in the buffer */
+//unsigned char *sstBuffer=NULL; /*Unparsed sst to accumulate all its parts*/
+//int sstBytes = 0; /*Size of SST Data, already accumulated in the buffer */
 int codepage=1251; /*default*/
 int prev_rectype=0;
 /* holds a pointer to formula value, becouse value itself would be in
  * next biff record
  */
-unsigned char **saved_reference = NULL;
+//unsigned char **saved_reference = NULL;
+
+unsigned char* extract_xls_string(unsigned char* src);
+
+void extract_sst(unsigned char* sstbuf, int bufsize) {
+	int32_t sstsize = getlong(sstbuf + 4, 0);
+	unsigned char* curString = curString = sstbuf + 8;
+	for (int i = 0; i < sstsize && curString < sstbuf + bufsize; ++i)
+		curString = extract_xls_string(curString);
+}
 
 void process_item (int rectype, int reclen, unsigned char *rec) {
-	if (rectype != CONTINUE && prev_rectype == SST) {
-		/* we have accumulated  unparsed SST, and now encountered
-		 * another record, which indicates that SST is ended */
-		/* fprintf(stderr,"parse sst!\n");*/
-		parse_sst(sstBuffer,sstBytes);
-	}	
+	//if (rectype != CONTINUE && prev_rectype == SST) {
+	//	/* we have accumulated  unparsed SST, and now encountered
+	//	 * another record, which indicates that SST is ended */
+	//	/* fprintf(stderr,"parse sst!\n");*/
+	//	parse_sst(sstBuffer,sstBytes);
+	//}	
 	switch (rectype) {
 	case FILEPASS: {
 		catdoc_raise_error("File is encrypted");
@@ -189,179 +198,199 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		 */
 /* 		fprintf(stderr,"SST\n"); */
 		/* If exists first SST entry, then just drop it and start new*/
-		if (sstBuffer != NULL) 
-			free(sstBuffer);
-		if (sst != NULL)
-			free(sst);
-		
-		sstBuffer=(unsigned char*)malloc(reclen);
-		sstBytes = reclen;
-		if (sstBuffer == NULL ) {
-			perror("SSTptr alloc error! ");
-			exit(1);
-		}	  
-		memcpy(sstBuffer,rec,reclen);
+		extract_sst(rec, reclen);
+		//if (sstBuffer != NULL) 
+		//	free(sstBuffer);
+		//if (sst != NULL)
+		//	free(sst);
+		//
+		//sstBuffer=(unsigned char*)malloc(reclen);
+		//sstBytes = reclen;
+		//if (sstBuffer == NULL ) {
+		//	catdoc_raise_error("SSTptr alloc error! ");
+		//	exit(1);
+		//}	  
+		//memcpy(sstBuffer,rec,reclen);
 		break;
 	}	
 	case CONTINUE: {
-		if (prev_rectype != SST) {
-			return; /* to avoid changing of prev_rectype;*/
-		}    
-		sstBuffer=realloc(sstBuffer,sstBytes+reclen);
-		if (sstBuffer == NULL ) {
-			perror("SSTptr realloc error! ");
-			exit(1);
-		}	  
-		memcpy(sstBuffer+sstBytes,rec,reclen);
-		sstBytes+=reclen;
+		//if (prev_rectype != SST) {
+		//	return; /* to avoid changing of prev_rectype;*/
+		//}    
+		//sstBuffer=realloc(sstBuffer,sstBytes+reclen);
+		//if (sstBuffer == NULL ) {
+		//	catdoc_raise_error("SSTptr realloc error! ");
+		//	exit(1);
+		//}	  
+		//memcpy(sstBuffer+sstBytes,rec,reclen);
+		//sstBytes+=reclen;
 		return;
 	}			   
 	case LABEL: {
 		int row,col;
-		unsigned char **pcell;
 		unsigned char *src=(unsigned char *)rec+6;
 
-		saved_reference=NULL;
+		//saved_reference=NULL;
 		row = getshort(rec,0); 
 		col = getshort(rec,2);
 		/* 		fprintf(stderr,"LABEL!\n"); */
-		pcell=allocate(row,col);
-		*pcell=copy_unicode_string(&src);
+		//unsigned char** pcell=allocate(row,col);
+		extract_xls_string(src);
+		//*pcell = "";// copy_unicode_string(&src);
 		break;
 	}     
-	case BLANK: { int row,col;unsigned char **pcell;
-			row = getshort(rec,0);
-			col = getshort(rec,2);
-			pcell=allocate(row,col);
-			*pcell=NULL;
-			break;
+	case BLANK: {
+		//int row,col;
+		//unsigned char **pcell;
+		//row = getshort(rec,0);
+		//col = getshort(rec,2);
+		//pcell=allocate(row,col);
+		//*pcell=NULL;
+		break;
 	}
 	case MULBLANK: {
-		int row, startcol,endcol;
-		unsigned char **pcell;
-		row = getshort(rec,0);
-		startcol = getshort(rec,2);
-		endcol=getshort(rec,reclen-2);
-		pcell=allocate(row,endcol);
-		*pcell=NULL;
-		(void)startcol;
+		//int row, startcol,endcol;
+		//unsigned char **pcell;
+		//row = getshort(rec,0);
+		//startcol = getshort(rec,2);
+		//endcol=getshort(rec,reclen-2);
+		//pcell=allocate(row,endcol);
+		//*pcell=NULL;
+		//(void)startcol;
 		break;
 	}	   
 	case CONSTANT_STRING: {
-		int row = getshort(rec,0); 
-		int col = getshort(rec,2);
-		unsigned char **pcell;
-		int string_no=getshort(rec,6);
-		if (!sst) {
-			catdoc_raise_error("CONSTANT_STRING before SST parsed");
-			//exit(1);
-		}    
-		/* 									fprintf(stderr,"col=%d row=%d no=%d\n",col,row,string_no); */
-									
-		saved_reference=NULL;
-		pcell=allocate(row,col);
-		if (string_no>=sstsize|| string_no < 0 ) {
-			catdoc_raise_error("string index out of boundary");
-			//exit(1);	 
-		} else if (sst[string_no] !=NULL) {	
-			int len;
-			unsigned char *outptr;
-			len=strlen((char *)sst[string_no]);
-			outptr=*pcell=malloc(len+1);
-			strcpy((char *)outptr,(char *)sst[string_no]);
-		} else {
-			*pcell=malloc(1);
-			**pcell = 0;
-		}	
+		//int row = getshort(rec,0); 
+		//int col = getshort(rec,2);
+		//int string_no=getshort(rec,6);
+		//if (!sst) {
+		//	catdoc_raise_error("CONSTANT_STRING before SST parsed");
+		//	//exit(1);
+		//}    
+		///* 									fprintf(stderr,"col=%d row=%d no=%d\n",col,row,string_no); */
+		//							
+		//saved_reference=NULL;
+		//
+		//if (string_no>=sstsize|| string_no < 0 ) {
+		//	catdoc_raise_error("string index out of boundary");
+		//	//exit(1);	 
+		//} else if (sst[string_no] !=NULL) {	
+			//int len=strlen((char *)sst[string_no]);
+			//catdoc_output_chars(sst[string_no], len);
+
+			// OLD:
+			//unsigned char** pcell = allocate(row, col);
+			//unsigned char *outptr=*pcell=malloc(len+1);
+			//strcpy((char *)outptr,(char *)sst[string_no]);
+			//print_sheet();
+		//}
+		//else {
+		//	*pcell=malloc(1);
+		//	**pcell = 0;
+		//}	
 		break;
 	}
 	case 0x03:
 	case 0x103:
 	case 0x303:
 	case NUMBER: {
-		int row,col;
-		unsigned char **pcell;
+		//int row,col;
+		//saved_reference=NULL;
+		//row = getshort(rec,0)-startrow; 
+		//col = getshort(rec,2);
 
-		saved_reference=NULL;
-		row = getshort(rec,0)-startrow; 
-		col = getshort(rec,2);
-		pcell=allocate(row,col);
-		*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
+		//unsigned char** pcell=allocate(row,col);
+		//*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
+
+		char* str = format_double(rec, 6, getshort(rec, 4));
+		int lenStr = strlen(str);
+		catdoc_output_chars(str, lenStr);
 		break;
 	}
 	case INTEGER_CELL: {
-		int row,col;
-		unsigned char **pcell;
-
-		row = getshort(rec,0)-startrow;
-		col = getshort(rec,2);
-		pcell=allocate(row,col);
-		*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));
+		//int row,col;
+		//unsigned char **pcell;
+		//
+		//row = getshort(rec,0)-startrow;
+		//col = getshort(rec,2);
+		//pcell=allocate(row,col);
+		//*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));
+		char* str = format_int(getshort(rec, 7), getshort(rec, 4));
+		int lenStr = strlen(str);
+		catdoc_output_chars(str, lenStr);
 		break;
 
 	}				  
 	case RK: {
-		int row,col,format_code;
-		unsigned char **pcell;
+		//int row,col,
+		int format_code;
 
-		saved_reference=NULL;
-		row = getshort(rec,0)-startrow; 
-		col = getshort(rec,2);
-		pcell=allocate(row,col);
+		//saved_reference=NULL;
+		//row = getshort(rec,0)-startrow; 
+		//col = getshort(rec,2);
+		//unsigned char** pcell=allocate(row,col);
 		format_code = getshort(rec,4);
-		*pcell=(unsigned char *)strdup(format_rk(rec+6,format_code));
+		//*pcell=(unsigned char *)strdup(format_rk(rec+6,format_code));
+		char* str = format_rk(rec + 6, format_code);
+		catdoc_output_chars(str, strlen(str));
 		break;
 	}
 	case MULRK: {
 		int row,col,startcol,endcol,offset,format_code;
-		unsigned char **pcell;
+		//unsigned char **pcell;
 		row = getshort(rec,0)-startrow; 
 		startcol = getshort(rec,2);
 		endcol = getshort(rec,reclen-2);
-		saved_reference=NULL;
+		//saved_reference=NULL;
 
 		for (offset=4,col=startcol;col<=endcol;offset+=6,col++) { 
-			pcell=allocate(row,col);
+			//pcell=allocate(row,col);
 			format_code=getshort(rec,offset);
-			*pcell=(unsigned char *)strdup(format_rk(rec+offset+2,format_code));
-
+			//*pcell=(unsigned char *)strdup(format_rk(rec+offset+2,format_code));
+			char* str = format_rk(rec + offset + 2, format_code);
+			catdoc_output_chars(str, strlen(str));
 		}		 
 		break;
 	} 
 	case FORMULA: { 
 		int row,col;
 		unsigned char **pcell;
-		saved_reference=NULL;
+		//saved_reference=NULL;
 		row = getshort(rec,0)-startrow; 
 		col = getshort(rec,2);
-		pcell=allocate(row,col);
+		//pcell=allocate(row,col);
 		if (((unsigned char)rec[12]==0xFF)&&(unsigned char)rec[13]==0xFF) {
 			/* not a floating point value */
 			if (rec[6]==1) {
 				/*boolean*/
 				char buf[2]="0";
 				buf[0]+=rec[9];
-				*pcell=(unsigned char *)strdup(buf);
+				//*pcell=(unsigned char *)strdup(buf);
+				catdoc_output_chars(buf, strlen(buf));
 			} else if (rec[6]==2) {
 				/*error*/
 				char buf[6]="ERROR";
-				*pcell=(unsigned char *)strdup(buf);
+				//*pcell=(unsigned char *)strdup(buf);
+				catdoc_output_chars(buf, strlen(buf));
 			} else if (rec[6]==0) {
-				saved_reference=pcell;
+				//saved_reference=pcell;
 			}   
 		} else {
 			int format_code=getshort(rec,4);
-			*pcell=(unsigned char *)strdup(format_double(rec,6,format_code));
+			//*pcell=(unsigned char *)strdup(format_double(rec,6,format_code));
+			unsigned char* str = format_double(rec, 6, format_code);
+			catdoc_output_chars(str, strlen(str));
 		}		 
 		break;
 	}
 	case STRING: {
 		unsigned char *src=(unsigned char *)rec;
-		if (!saved_reference) {
-			catdoc_raise_error("String record without preceeding string formula");
-			break;
-		}
-		*saved_reference=copy_unicode_string(&src);
+		//if (!saved_reference) {
+		//	catdoc_raise_error("String record without preceeding string formula");
+		//	break;
+		//}
+		//*saved_reference = copy_unicode_string(&src);
+		extract_xls_string(src);
 		break;
 	}	    
 	case BOF: {
@@ -416,117 +445,172 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	prev_rectype=rectype; 
 }  
 
-/*
- * Extracts string from sst and returns mallocked copy of it
- */
-unsigned char *copy_unicode_string (unsigned char **src) {
-	int count=0;
-	int flags = 0;
-	int start_offset=0;
-	int to_skip=0;	/* Used to counmt data after end of string */ 
-	int offset = 1;	/* Variable length of the first field  */
-	int charsize;
-	/* 	char *realstart=*src; */
-	unsigned char *dest;/* where to copy string */
-	unsigned char *s,*d,*c;
-
-	int i,u,l,len;
-
-	/* 	for(i=0;i<20;i++) */
-	/* 		fprintf(stderr,"%02x ",(*src)[i]); */
-		/* 	fprintf(stderr,"\n"); */
-
-	flags = *(*src+1+offset);
-	if (! ( flags == 0 || flags == 1 || flags == 8 || flags == 9 ||
-					flags == 4 || flags == 5 || flags == 0x0c || flags == 0x0d ) ) {
-		count=**src;
-		flags = *(*src+offset);
-		offset --;
-		if (! ( flags == 0 || flags == 1 || flags == 8 || flags == 9 ||
-						flags == 4 || flags == 5 || flags == 0x0c || flags == 0x0d ) ) {
+unsigned char* extract_xls_string(unsigned char* src)
+{
+	int flags = src[2];
+	int count;
+	if (!(flags == 0 || flags == 1 || flags == 8 ||
+		flags == 9 || flags == 4 || flags == 5 ||
+		flags == 0x0c || flags == 0x0d)) {
+		count = src[0];
+		flags = src[1];
+		if (!(flags == 0 || flags == 1 || flags == 8 ||
+			flags == 9 || flags == 4 || flags == 5 ||
+			flags == 0x0c || flags == 0x0d)) {
 			/* 			fprintf(stderr,"Strange flags = %d, returning NULL\n", flags); */
-			return NULL;
+			return;
 		}
+		src += 2;
 	}
 	else {
-		count=getshort(*src,0);
-	}   
-	charsize=(flags &0x01) ? 2 : 1;
+		count = getshort(src, 0);
+		src += 3;
+	}
 
-	switch (flags & 12 ) {
+	int charsize = (flags & 0x01) ? 2 : 1;
+	int to_skip;
+	switch (flags & 12) {
 	case 0x0c: /* Far East with RichText formating */
-		to_skip=4*getshort(*src,2+offset)+getlong(*src, 4+offset);
-		start_offset=2+offset+2+4;
+		to_skip = 4 * getshort(src, 0) + getlong(src, 2);
+		src += (2 + 4);
 		/* 		fprintf(stderr,"Far East with RichText formating\n"); */
 		break;
 
 	case 0x08: /* With RichText formating */
-		to_skip=4*getshort(*src,2+offset);
-		start_offset=2+offset+2;
+		to_skip = 4 * getshort(*src, 0);
+		src += 2;
 		/* 		fprintf(stderr,"With RichText formating %d\n",getshort(*src,2+offset)); */
 		break;
 
 	case 0x04: /* Far East */
-		to_skip=getlong(*src, 2+offset);
-		start_offset=2+offset+4;
+		to_skip = getlong(*src, 0);
+		src += 4;
 		/* 		fprintf(stderr,"Far East\n"); */
 		break;
 
 	default:
-		to_skip=0;
-		start_offset=2+offset;
+		to_skip = 0;
 		/* 		fprintf(stderr,"Default string\n"); */
 	}
 
-	/* 	fprintf(stderr,"count=%d skip=%d start_offset=%d\n", */
-	/* 					count, to_skip, start_offset); */
-	/* а здесь мы копируем строку	*/
-	if ( (dest=malloc(count+1)) == NULL ) {
-		perror("Dest string alloc error");
-		*src+=(to_skip+start_offset+(count*charsize));
-		exit(0);
-	}
-	*src+=start_offset;
-	len = count;
-	*dest=0;l=0;
-	for (s=*src,d=dest,i=0;i<count;i++,s+=charsize) {
-		/* 		fprintf(stderr,"l=%d len=%d count=%d charsize=%d\n",l,len,count,charsize); */
-		if ( (charsize == 1 && (*s == 1 || *s == 0)) ||
-				 (charsize == 2 && (*s == 1 || *s == 0) && *(s+1) != 4)) {
-			/* 			fprintf(stderr,"extchar (unicode)=%02x %02x\n",*s, *(s+1)); */
-			charsize=(*s &0x01) ? 2 : 1;
-			if (charsize == 2)
-				s-=1;
-			count++;
-			continue;
-		}
-		if ( charsize == 2 ){
-			u=(unsigned short)getshort(s,0);
-			c=(unsigned char *)convert_char(u);
-			/* 			fprintf(stderr,"char=%02x %02x\n", *s, *(s+1)); */
-		} else {
-			if (!source_charset) {
-				//check_charset(&source_csname,source_csname);	
-				/* fprintf(stderr,"charset=%s\n",source_csname);*/
-				source_charset=read_charset(source_csname);
-			}	
-			u=(unsigned short)to_unicode(source_charset,(unsigned char)*s);
-			c=(unsigned char *)convert_char(u);
-		}
-		if (c != NULL) {
-			int dl = strlen((char *)c);
-			while (l+dl>=len) {
-				len+=16;
-				dest=realloc(dest,len+1);
-			}
-			d=dest+l;
-			strcpy((char *)d,(char *)c);
-			l+=dl;
-		}      
-	}
-	*src=s+to_skip;
-	return dest;
+	if (charsize == 2)
+		catdoc_output_wchars(src, count);
+	else
+		catdoc_output_chars(src, count);
+
+	return src + charsize * count;
 }
+/*
+ * Extracts string from sst and returns mallocked copy of it
+ */
+//unsigned char *copy_unicode_string (unsigned char **src) {
+//	int count=0;
+//	int flags = 0;
+//	int start_offset=0;
+//	int to_skip=0;	/* Used to counmt data after end of string */ 
+//	int offset = 1;	/* Variable length of the first field  */
+//	int charsize;
+//	/* 	char *realstart=*src; */
+//	unsigned char *dest;/* where to copy string */
+//	unsigned char *s,*d,*c;
+//
+//	int i,u,l,len;
+//
+//	/* 	for(i=0;i<20;i++) */
+//	/* 		fprintf(stderr,"%02x ",(*src)[i]); */
+//		/* 	fprintf(stderr,"\n"); */
+//
+//	flags = *(*src+1+offset);
+//	if (! ( flags == 0 || flags == 1 || flags == 8 || flags == 9 ||
+//					flags == 4 || flags == 5 || flags == 0x0c || flags == 0x0d ) ) {
+//		count=**src;
+//		flags = *(*src+offset);
+//		offset --;
+//		if (! ( flags == 0 || flags == 1 || flags == 8 || flags == 9 ||
+//						flags == 4 || flags == 5 || flags == 0x0c || flags == 0x0d ) ) {
+//			/* 			fprintf(stderr,"Strange flags = %d, returning NULL\n", flags); */
+//			return NULL;
+//		}
+//	}
+//	else {
+//		count=getshort(*src,0);
+//	}   
+//	charsize=(flags &0x01) ? 2 : 1;
+//
+//	switch (flags & 12 ) {
+//	case 0x0c: /* Far East with RichText formating */
+//		to_skip=4*getshort(*src,2+offset)+getlong(*src, 4+offset);
+//		start_offset=2+offset+2+4;
+//		/* 		fprintf(stderr,"Far East with RichText formating\n"); */
+//		break;
+//
+//	case 0x08: /* With RichText formating */
+//		to_skip=4*getshort(*src,2+offset);
+//		start_offset=2+offset+2;
+//		/* 		fprintf(stderr,"With RichText formating %d\n",getshort(*src,2+offset)); */
+//		break;
+//
+//	case 0x04: /* Far East */
+//		to_skip=getlong(*src, 2+offset);
+//		start_offset=2+offset+4;
+//		/* 		fprintf(stderr,"Far East\n"); */
+//		break;
+//
+//	default:
+//		to_skip=0;
+//		start_offset=2+offset;
+//		/* 		fprintf(stderr,"Default string\n"); */
+//	}
+//
+//	/* 	fprintf(stderr,"count=%d skip=%d start_offset=%d\n", */
+//	/* 					count, to_skip, start_offset); */
+//	/* а здесь мы копируем строку	*/
+//	if ( (dest=malloc(count+1)) == NULL ) {
+//		catdoc_raise_error("Dest string alloc error");
+//		*src+=(to_skip+start_offset+(count*charsize));
+//		exit(0);
+//	}
+//	*src+=start_offset;
+//	len = count;
+//	*dest=0;l=0;
+//	for (s=*src,d=dest,i=0;i<count;i++,s+=charsize) {
+//		/* 		fprintf(stderr,"l=%d len=%d count=%d charsize=%d\n",l,len,count,charsize); */
+//		if ( (charsize == 1 && (*s == 1 || *s == 0)) ||
+//				 (charsize == 2 && (*s == 1 || *s == 0) && *(s+1) != 4)) {
+//			/* 			fprintf(stderr,"extchar (unicode)=%02x %02x\n",*s, *(s+1)); */
+//			charsize=(*s &0x01) ? 2 : 1;
+//			if (charsize == 2)
+//				s-=1;
+//			count++;
+//			continue;
+//		}
+//		if ( charsize == 2 ){
+//			u=(unsigned short)getshort(s,0);
+//			c=(unsigned char *)convert_char(u);
+//			/* 			fprintf(stderr,"char=%02x %02x\n", *s, *(s+1)); */
+//		} else {
+//			if (!source_charset) {
+//				//check_charset(&source_csname,source_csname);	
+//				/* fprintf(stderr,"charset=%s\n",source_csname);*/
+//				source_charset=read_charset(source_csname);
+//			}	
+//			u=(unsigned short)to_unicode(source_charset,(unsigned char)*s);
+//			c=(unsigned char *)convert_char(u);
+//		}
+//		if (c != NULL) {
+//			int dl = strlen((char *)c);
+//			while (l+dl>=len) {
+//				len+=16;
+//				dest=realloc(dest,len+1);
+//			}
+//			d=dest+l;
+//			strcpy((char *)d,(char *)c);
+//			l+=dl;
+//		}      
+//	}
+//	*src=s+to_skip;
+//	return dest;
+//}
 
 
 /* 
@@ -756,25 +840,25 @@ time_t float2date(double f) {
 /*
  * Parses SST into array of strings
  */
-void parse_sst(unsigned char *sstbuf,int bufsize) {
-	int i; /* index into sst */
-	unsigned char *curString; /* pointer into unparsed buffer*/
-	unsigned char *barrier=(unsigned char *)sstbuf+bufsize; /*pointer to end of buffer*/
-	unsigned char **parsedString;/*pointer into parsed array*/ 
-			
-	sstsize = getlong(sstbuf+4,0);
-	sst=(unsigned char **)malloc(sstsize*sizeof(unsigned char *));
-	
-	if (sst == NULL) {
-		perror("SST allocation error");
-		exit(1);
-	}
-	memset(sst,0,sstsize*sizeof(char *));
-	for (i=0,parsedString=sst,curString=sstbuf+8;
-			 i<sstsize && curString<barrier; i++,parsedString++) {
-		/* 		fprintf(stderr,"copying %d string\n",i); */
-		*parsedString = copy_unicode_string(&curString);
-	}       
-	/* 	fprintf(stderr,"end sst i=%d sstsize=%d\n",i,sstsize); */
-
-}	
+//void parse_sst(unsigned char *sstbuf,int bufsize) {
+//	int i; /* index into sst */
+//	unsigned char *curString; /* pointer into unparsed buffer*/
+//	unsigned char *barrier=(unsigned char *)sstbuf+bufsize; /*pointer to end of buffer*/
+//	unsigned char **parsedString;/*pointer into parsed array*/ 
+//			
+//	sstsize = getlong(sstbuf+4,0);
+//	sst=(unsigned char **)malloc(sstsize*sizeof(unsigned char *));
+//	
+//	if (sst == NULL) {
+//		catdoc_raise_error("SST allocation error");
+//		exit(1);
+//	}
+//	memset(sst,0,sstsize*sizeof(char *));
+//	for (i=0,parsedString=sst,curString=sstbuf+8;
+//			 i<sstsize && curString<barrier; i++,parsedString++) {
+//		/* 		fprintf(stderr,"copying %d string\n",i); */
+//		*parsedString = copy_unicode_string(&curString);
+//	}       
+//	/* 	fprintf(stderr,"end sst i=%d sstsize=%d\n",i,sstsize); */
+//
+//}	

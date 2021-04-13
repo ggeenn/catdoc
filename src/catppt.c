@@ -134,7 +134,7 @@ char *input_buffer, *output_buffer;
 //		filename = argv[i];
 //		input=fopen(filename,"rb");
 //		if (!input) {
-//			perror(filename);
+//			catdoc_raise_error(filename);
 //			exit(1);
 //		}
 //		if ((new_file=ole_init(input, NULL, 0)) != NULL) {

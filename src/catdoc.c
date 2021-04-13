@@ -140,7 +140,7 @@ int _argc;
 //		output_buffer=malloc(FILE_BUFFER);
 //		if (output_buffer) {
 //			if  (setvbuf(stdout,output_buffer,_IOFBF,FILE_BUFFER)) {
-//				perror("stdout");
+//				catdoc_raise_error("stdout");
 //			}
 //		} else {
 //			fprintf(stderr,"output buffer not allocated\n");
@@ -169,12 +169,12 @@ int _argc;
 //			f=fopen(argv[i],"rb");
 //			if (!f) {
 //				c=1;
-//				perror("catdoc");
+//				catdoc_raise_error("catdoc");
 //				continue;
 //			}
 //			if (input_buffer) {
 //				if (setvbuf(f,input_buffer,_IOFBF,FILE_BUFFER)) {
-//					perror(argv[i]);
+//					catdoc_raise_error(argv[i]);
 //				}
 //			}
 //			c=analyze_format(f);

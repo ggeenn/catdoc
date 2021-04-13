@@ -51,7 +51,7 @@ int longest_sequence=6;/* six is longest character sequence which can be
 //	}
 //	f=fopen(path,"rb");
 //	if (!f) {
-//		perror(path);
+//		catdoc_raise_error(path);
 //		free(map);
 //		return NULL;
 //	}

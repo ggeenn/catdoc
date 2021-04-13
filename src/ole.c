@@ -69,13 +69,13 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		if ( errno == ESPIPE ) {
 			/* We got non-seekable file, create temp file */
 			if((newfile=tmpfile()) == NULL) {
-				perror("Can't create tmp file");
+				catdoc_raise_error("Can't create tmp file");
 				return NULL;
 			}
 			if (bufSize > 0) {
 				ret=fwrite(buffer, 1, bufSize, newfile);
 				if(ret != bufSize) {
-					perror("Can't write to tmp file");
+					catdoc_raise_error("Can't write to tmp file");
 					fclose(newfile);
 					return NULL;
 				}
@@ -87,7 +87,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 			}
 			fseek(newfile,0,SEEK_SET);
 		} else {
-			perror("Can't seek in file");
+			catdoc_raise_error("Can't seek in file");
 			return NULL;
 		}
 	} else {
@@ -142,7 +142,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 		if ((newbuf=realloc(tmpBuf, sectorSize*(i+1)+MSAT_ORIG_SIZE)) != NULL) {
 			tmpBuf=newbuf;
 		} else {
-			perror("MSAT realloc error");
+			catdoc_raise_error("MSAT realloc error");
 			free(tmpBuf);
 			ole_finish();
 			return NULL;
@@ -199,7 +199,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 				if ((newSBD=realloc(SBD, sectorSize*sbdMaxLen)) != NULL) {
 					SBD=newSBD;
 				} else {
-					perror("SBD realloc error");
+					catdoc_raise_error("SBD realloc error");
 					ole_finish();
 					return NULL;
 				}
@@ -234,7 +234,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 			if (fread(properties+propLen*sectorSize,
 				  1, sectorSize, newfile)!=sectorSize) {
 				  if (errno != 0) {
-					perror("reading properties catalog");
+					catdoc_raise_error("reading properties catalog");
 				  }
 				  ole_finish();
 				  return NULL;
@@ -247,7 +247,7 @@ FILE* ole_init(FILE *f, void *buffer, size_t bufSize)  {
 				if ((newProp=realloc(properties, propMaxLen*sectorSize)) != NULL)
 					properties=newProp;
 				else {
-					perror("Properties realloc error");
+					catdoc_raise_error("Properties realloc error");
 					ole_finish();
 					return NULL;
 				}
@@ -330,7 +330,7 @@ FILE *ole_readdir(FILE *f) {
 	if( !rightOleType(oleBuf))
 		return NULL;
 	if ((e = (oleEntry*) calloc(sizeof(oleEntry),1)) == NULL) {
-		perror("Can\'t allocate memory");
+		catdoc_raise_error("Can\'t allocate memory");
 		return NULL;
 	}
 	e->dirPos=oleBuf;
@@ -391,7 +391,7 @@ FILE *ole_readdir(FILE *f) {
 									  chainMaxLen*sizeof(long int))) != NULL) {
 					e->blocks=newChain;
 				} else {
-					perror("Properties realloc error");
+					catdoc_raise_error("Properties realloc error");
 					free(e->blocks);
 					e->blocks=NULL;
 					return NULL;

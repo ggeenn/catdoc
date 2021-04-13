@@ -11,6 +11,9 @@
 #include <ctype.h>
 #include <string.h>
 #include "xls.h"
+
+void catdoc_raise_error(const char* reason);
+
 struct rowdescr *rowptr=NULL;
 int startrow=0,lastrow=0;
 char cell_separator = ',';
@@ -20,34 +23,34 @@ char *sheet_separator = "\f";
  * Allocates cell for given row and col and returns pointer to poitrer
  * of cell contents
  */ 
-unsigned char **allocate (int row,int col) {
-	unsigned int newrow,newcol;
-	if (row>=lastrow) {
-		newrow=(row/16+1)*16;
-		rowptr=realloc(rowptr,newrow*sizeof(struct rowdescr));
-		if (rowptr == NULL) {
-			perror("allocating sheet ");
-			exit(1);
-		}	
-		memset(rowptr+lastrow,0,(newrow-lastrow)*sizeof(struct rowdescr));
-		lastrow=newrow;
-	}
-	if (col>=rowptr[row].end) {
-		newcol=(col/16+1)*16;
-		rowptr[row].cells=
-		   (unsigned char**)realloc(rowptr[row].cells,
-		                            newcol*sizeof(unsigned char *));
-		if (rowptr[row].cells == NULL) {
-			perror("allocating row");
-			exit(1);
-		}	
-		memset(rowptr[row].cells+rowptr[row].end,0,(newcol-rowptr[row].end)
-				*sizeof(char *));
-		rowptr[row].end=newcol;
-	}  
-	if (col>rowptr[row].last) rowptr[row].last=col;
-	return (rowptr[row].cells+col);
-}
+//unsigned char **allocate (int row,int col) {
+//	unsigned int newrow,newcol;
+//	if (row>=lastrow) {
+//		newrow=(row/16+1)*16;
+//		rowptr=realloc(rowptr,newrow*sizeof(struct rowdescr));
+//		if (rowptr == NULL) {
+//			catdoc_raise_error("allocating sheet ");
+//			exit(1);
+//		}	
+//		memset(rowptr+lastrow,0,(newrow-lastrow)*sizeof(struct rowdescr));
+//		lastrow=newrow;
+//	}
+//	if (col>=rowptr[row].end) {
+//		newcol=(col/16+1)*16;
+//		rowptr[row].cells=
+//		   (unsigned char**)realloc(rowptr[row].cells,
+//		                            newcol*sizeof(unsigned char *));
+//		if (rowptr[row].cells == NULL) {
+//			catdoc_raise_error("allocating row");
+//			exit(1);
+//		}	
+//		memset(rowptr[row].cells+rowptr[row].end,0,(newcol-rowptr[row].end)
+//				*sizeof(char *));
+//		rowptr[row].end=newcol;
+//	}  
+//	if (col>rowptr[row].last) rowptr[row].last=col;
+//	return (rowptr[row].cells+col);
+//}
 /*
  * Frees up all memory used by sheet
  */ 
@@ -136,7 +139,7 @@ void print_sheet(void) {
 					printed=1;
 				}
 				if (*col) {
-					catdoc_output_chars(*col, 1);
+					catdoc_output_chars(*col, strlen(*col));
 					printed=1;
 				}
 			}

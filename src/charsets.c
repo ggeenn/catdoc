@@ -84,7 +84,7 @@ int from_unicode (CHARSET charset, int u) {
 //	f=fopen(path,"rb");
 //
 //	if (!f) {
-//		perror(path); 
+//		catdoc_raise_error(path); 
 //		return NULL;
 //	}
 //	if (input_buffer)
@@ -135,7 +135,7 @@ int get_utf16lsb (FILE *f,long *offset,long fileend) {
     int result;
 	result=catdoc_read(buf, 1, 2, f);
 	if (result<0) {
-		perror("read:");
+		catdoc_raise_error("read:");
 		exit(1);
 	}
 	if (result !=2) {
@@ -154,7 +154,7 @@ int get_utf16msb (FILE *f,long *offset,long fileend) {
     int result;
 	result=catdoc_read(buf, 1, 2, f);
 	if (result<0) {
-		perror("read:");
+		catdoc_raise_error("read:");
 		exit(1);
 	}
 	if (result !=2) {
@@ -170,7 +170,7 @@ int get_utf8 (FILE *f,long *offset,long fileend) {
     int result;
 	result=catdoc_read(buf, 1, 1, f);
 	if (result<0) {
-		perror("read");
+		catdoc_raise_error("read");
 		exit(1);
 	}	
 	if (result==0) return EOF;

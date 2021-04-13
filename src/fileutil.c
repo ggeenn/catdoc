@@ -244,7 +244,7 @@ char *exe_dir(void) {
 //#endif
 //				break;
 //			default:
-//				perror("catdoc");
+//				catdoc_raise_error("catdoc");
 //				exit(1);
 //		}
 //		glob_flags|=GLOB_APPEND;

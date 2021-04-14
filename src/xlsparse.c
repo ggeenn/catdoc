@@ -33,7 +33,7 @@ char number_format[8]=MK_FORMAT(DBL_DIG);
 void catdoc_raise_error(const char* reason);
 void CleanUpFormatIdxUsed(void);
 
-void do_table(FILE *input,char *filename) {    
+int do_table(FILE *input,char *filename) {    
 	long rectype;
 	long reclen,build_year=0,build_rel=0,offset=0;
 	int eof_flag=0;
@@ -77,7 +77,7 @@ void do_table(FILE *input,char *filename) {
 				break;
 			} else {
 				catdoc_raise_error(" Invalid BOF record");// , filename);
-				return;
+				return 0;
 			} 
 		} else {
 			itemsread=catdoc_read(rec,126,1,input);
@@ -85,7 +85,7 @@ void do_table(FILE *input,char *filename) {
 	}
 	if (catdoc_eof(input)) {
 		catdoc_raise_error("No BOF record found");// , filename);
-		//exit(1);
+		return 0;
 	}    
 	while(itemsread){
 		unsigned char buffer[2];
@@ -93,7 +93,7 @@ void do_table(FILE *input,char *filename) {
 		itemsread = catdoc_read(buffer, 2, 1, input);
 		if (catdoc_eof(input)) {
 			process_item(MSEOF,0,NULL);
-			return;
+			return 0;
 		}
 		
 		if(itemsread == 0)
@@ -121,7 +121,7 @@ void do_table(FILE *input,char *filename) {
 			eof_flag=0;	
 		}  
 	}
-	return;
+	return 0;
 }
 unsigned char **sst=NULL;/* Shared string table parsed into array of strings in
 														output encoding*/
@@ -303,8 +303,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		//*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
 
 		char* str = format_double(rec, 6, getshort(rec, 4));
-		int lenStr = strlen(str);
-		catdoc_output_chars(str, lenStr);
+		catdoc_output_chars(str, strlen(str));
 		break;
 	}
 	case INTEGER_CELL: {
@@ -316,8 +315,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		//pcell=allocate(row,col);
 		//*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));
 		char* str = format_int(getshort(rec, 7), getshort(rec, 4));
-		int lenStr = strlen(str);
-		catdoc_output_chars(str, lenStr);
+		catdoc_output_chars(str, strlen(str));
 		break;
 
 	}				  
@@ -354,7 +352,6 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	} 
 	case FORMULA: { 
 		int row,col;
-		unsigned char **pcell;
 		//saved_reference=NULL;
 		row = getshort(rec,0)-startrow; 
 		col = getshort(rec,2);
@@ -458,7 +455,8 @@ unsigned char* extract_xls_string(unsigned char* src)
 			flags == 9 || flags == 4 || flags == 5 ||
 			flags == 0x0c || flags == 0x0d)) {
 			/* 			fprintf(stderr,"Strange flags = %d, returning NULL\n", flags); */
-			return;
+			catdoc_raise_error("Strange XLS_STRING flags");
+			return 0;
 		}
 		src += 2;
 	}
@@ -477,13 +475,13 @@ unsigned char* extract_xls_string(unsigned char* src)
 		break;
 
 	case 0x08: /* With RichText formating */
-		to_skip = 4 * getshort(*src, 0);
+		to_skip = 4 * getshort(src, 0);
 		src += 2;
 		/* 		fprintf(stderr,"With RichText formating %d\n",getshort(*src,2+offset)); */
 		break;
 
 	case 0x04: /* Far East */
-		to_skip = getlong(*src, 0);
+		to_skip = getlong(src, 0);
 		src += 4;
 		/* 		fprintf(stderr,"Far East\n"); */
 		break;
@@ -494,7 +492,7 @@ unsigned char* extract_xls_string(unsigned char* src)
 	}
 
 	if (charsize == 2)
-		catdoc_output_wchars(src, count);
+		catdoc_output_wchars((wchar_t*)src, count);
 	else
 		catdoc_output_chars(src, count);
 

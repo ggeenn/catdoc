@@ -22,6 +22,7 @@
 #include "ppttypes.h"
 
 void catdoc_output_chars(unsigned char* buffer, size_t bufferSz);
+void catdoc_raise_error(const char* reason);
 
 char *slide_separator = "\f"; 
 
@@ -48,7 +49,7 @@ static void start_text_out(void) {
 	}
 	slide_state = TEXTOUT;
 }	
-void do_ppt(FILE *input,char *filename) {
+int do_ppt(FILE *input,char *filename) {
 	int itemsread=1;
 	int rectype;
 	long reclen;
@@ -63,17 +64,18 @@ void do_ppt(FILE *input,char *filename) {
 		
 		if (catdoc_eof(input)) {
 			process_item(DOCUMENT_END,0,input);
-			return;
+			return 0;
 		}
 		if(itemsread < 8)
 			break;
 		rectype=getshort(recbuf,2);
 		reclen=getulong(recbuf,4);
 		if (reclen < 0) {
-			return;
+			catdoc_raise_error("PPT wrong format, block size is negative");
 		}	
 		process_item(rectype,reclen,input);
 	}
+	return 0;
 }
 
 
@@ -85,7 +87,7 @@ void do_ppt(FILE *input,char *filename) {
  * @param input 
  */
 static void process_item (int rectype, long reclen, FILE* input) {
-	int i=0, u;
+	int i=0;
 	static unsigned char buf[2];
 	//fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
  
@@ -303,7 +305,7 @@ static void process_item (int rectype, long reclen, FILE* input) {
 
 	case PPDRAWING_FRAME_D: {
 		char* buf = malloc(reclen);
-		uint32_t res = catdoc_read(buf, 1, reclen, input);
+		size_t res = catdoc_read(buf, 1, reclen, input);
 		if (res != reclen)
 		{
 			free(buf);

@@ -17,9 +17,9 @@ char rtf_sign[]="{\\rtf";
 char old_word_sign[]={0xdb,0xa5,0};
 char write_sign[]={0x31,0xBE,0};
 int verbose=0;
-void do_ppt(FILE* input, char* filename);
-void do_table(FILE* input, char* filename);
-void raise_error(const char* reason);
+int do_ppt(FILE* input, char* filename);
+int do_table(FILE* input, char* filename);
+void catdoc_raise_error(const char* reason);
 /********************************************************************* 
  * Determines format of input file and calls parse_word_header or 
  * process_file if
@@ -69,10 +69,10 @@ int analyze_format(FILE *f, char* filename) {
 					}
 					if (strcmp(((oleEntry*)ole_file)->name , "Workbook") == 0
 						|| strcmp(((oleEntry*)ole_file)->name,"Book") == 0) {
-						do_table(ole_file,filename);
+						ret_code = do_table(ole_file,filename);
 					}
 					if (strcmp(((oleEntry*)ole_file)->name , "PowerPoint Document") == 0) {
-						do_ppt(ole_file,filename);
+						ret_code = do_ppt(ole_file,filename);
 					}
 				} 
 				ole_close(ole_file);

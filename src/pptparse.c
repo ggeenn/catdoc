@@ -49,7 +49,7 @@ static void start_text_out(void) {
 	}
 	slide_state = TEXTOUT;
 }	
-int do_ppt(FILE *input,char *filename) {
+int do_ppt(FILE *input) {
 	int itemsread=1;
 	int rectype;
 	long reclen;
@@ -78,7 +78,12 @@ int do_ppt(FILE *input,char *filename) {
 	return 0;
 }
 
-
+void printify(unsigned char* buf, int len)
+{
+	for (int i = 0; i < len; ++i)
+		if (!isprint(buf[i]))
+			buf[i] = ' ';
+}
 /** 
  * 
  * 
@@ -157,11 +162,10 @@ static void process_item (int rectype, long reclen, FILE* input) {
 			for(i=0; i < reclen; i++) {
 				catdoc_read(buf,1,1,input);
 				if ((unsigned char)*buf != 0x0d)
-					catdoc_output_chars(convert_char((unsigned char)*buf), 1);// fputs(convert_char((unsigned char)*buf), stdout);
+					catdoc_output_chars(convert_char((unsigned char)*buf), 1);
 				else
-					catdoc_output_chars(" ", 1); //fputc('\n', stdout);
+					catdoc_output_chars(" ", 1);
 			}
-			//fputc('\n',stdout);
 		}
 		break;
 		
@@ -304,7 +308,8 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		break;
 
 	case PPDRAWING_FRAME_D: {
-		char* buf = malloc(reclen);
+		unsigned char* buf = malloc(reclen);
+		unsigned char* bufEnd = buf + reclen;
 		size_t res = catdoc_read(buf, 1, reclen, input);
 		if (res != reclen)
 		{
@@ -312,14 +317,29 @@ static void process_item (int rectype, long reclen, FILE* input) {
 			catdoc_raise_error("Wrong ppt PPDRAWING_FRAME_D size");
 		}
 
-		uint32_t type = getulong(buf, 12);
-		uint32_t subtype = getulong(buf, 8);
-		if (type == PPDRAWING_FRAME_D_TYPE_STR && subtype == PPDRAWING_FRAME_D_SUBTYPE_STR)
+		uint32_t type = getulong(buf, 8);
+		uint16_t subtype = getshort(buf, 14);
+		uint32_t len = getulong(buf, 16);
+		unsigned char* str = buf + 20;
+		//printify(str, len);
+		//printf("FRAME_D [0x%x - 0x%x] %d bytes => [%s]\n", type, subtype, reclen, str);
+		if (PPDRAWING_FRAME_D_TYPE_STR == type)
 		{
-			uint32_t len = getulong(buf, 16);
-			if (20 + len <= reclen)
+			if (len > bufEnd - str)
 			{
-				catdoc_output_chars(buf + 20, len);
+				free(buf);
+				catdoc_raise_error("Wrong ppt PPDRAWING_FRAME_D size");
+			}
+			switch(subtype)
+			{
+			case PPDRAWING_FRAME_D_SUBTYPE_CSTR:
+				catdoc_output_chars(str, len);
+				break;
+			case PPDRAWING_FRAME_D_SUBTYPE_WSTR:
+				catdoc_output_wchars(str, len/2);
+				break;
+			default:
+				break;
 			}
 		}
 		free(buf);

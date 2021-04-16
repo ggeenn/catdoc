@@ -33,7 +33,7 @@ char number_format[8]=MK_FORMAT(DBL_DIG);
 void catdoc_raise_error(const char* reason);
 void CleanUpFormatIdxUsed(void);
 
-int do_table(FILE *input,char *filename) {    
+int do_table(FILE *input) {    
 	long rectype;
 	long reclen,build_year=0,build_rel=0,offset=0;
 	int eof_flag=0;

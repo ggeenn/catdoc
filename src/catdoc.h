@@ -239,7 +239,7 @@ void copy_out(FILE *f, char *header);
 void catdoc_output_wchars(wchar_t *buffer, size_t bufferSz) ;
 int parse_rtf(FILE *f);
 /* format recognition*/
-int analyze_format(FILE *f, char* filename);
+int analyze_format(FILE *f);
 void list_charsets(void);
 int parse_word_header(unsigned char *buffer,FILE *f,int offset,long curpos);
 /* large buffers for file IO*/

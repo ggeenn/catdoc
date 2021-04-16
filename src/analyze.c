@@ -17,8 +17,8 @@ char rtf_sign[]="{\\rtf";
 char old_word_sign[]={0xdb,0xa5,0};
 char write_sign[]={0x31,0xBE,0};
 int verbose=0;
-int do_ppt(FILE* input, char* filename);
-int do_table(FILE* input, char* filename);
+int do_ppt(FILE* input);
+int do_table(FILE* input);
 void catdoc_raise_error(const char* reason);
 /********************************************************************* 
  * Determines format of input file and calls parse_word_header or 
@@ -26,7 +26,7 @@ void catdoc_raise_error(const char* reason);
  * it is word processor file or copy_out if it is plain text file
  * return not 0 when error
  ********************************************************************/ 
-int analyze_format(FILE *f, char* filename) {
+int analyze_format(FILE *f) {
 	unsigned char buffer[129];
 	long offset=0;
 	FILE *new_file, *ole_file;
@@ -69,10 +69,10 @@ int analyze_format(FILE *f, char* filename) {
 					}
 					if (strcmp(((oleEntry*)ole_file)->name , "Workbook") == 0
 						|| strcmp(((oleEntry*)ole_file)->name,"Book") == 0) {
-						ret_code = do_table(ole_file,filename);
+						ret_code = do_table(ole_file);
 					}
 					if (strcmp(((oleEntry*)ole_file)->name , "PowerPoint Document") == 0) {
-						ret_code = do_ppt(ole_file,filename);
+						ret_code = do_ppt(ole_file);
 					}
 				} 
 				ole_close(ole_file);

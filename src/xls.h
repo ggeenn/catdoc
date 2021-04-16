@@ -39,7 +39,7 @@ void process_item (int rectype, int reclen, unsigned char *rec);
 //unsigned char *copy_unicode_string(unsigned char **src);
 char convert8to8(char *src,int count);
 char *convert16to8(char *src,int count);
-int do_table(FILE *input,char *filename);
+int do_table(FILE *input);
 char *mark_string(char *instr);
 
 /* ---- added by Igor ---- */

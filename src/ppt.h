@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <math.h>
 
-int do_ppt(FILE *input,char *filename);
+int do_ppt(FILE *input);
 
 #endif /* _PPT_H */
 

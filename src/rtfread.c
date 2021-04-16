@@ -14,6 +14,8 @@
 #include <string.h>
 #include "catdoc.h"
 
+void catdoc_raise_error(const char* reason);
+
 /********************************************************
  * Datatypes declaration
  * 

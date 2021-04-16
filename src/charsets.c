@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include "catdoc.h"
 
+void catdoc_raise_error(const char* reason);
+
 char *charset_path=CHARSETPATH;
 char *source_csname=SOURCE_CHARSET, *dest_csname=TARGET_CHARSET;
 uint16_t * source_charset;

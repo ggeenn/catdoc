@@ -19,7 +19,7 @@
 #ifndef HAVE_STRFTIME
 #include "../compat/strftime.h"
 #endif
-static unsigned char rec[MAX_MS_RECSIZE];
+
 int biff_version=0;
 short int *formatTable=NULL;
 char *forced_date_format = NULL;
@@ -33,8 +33,10 @@ char number_format[8]=MK_FORMAT(DBL_DIG);
 void catdoc_raise_error(const char* reason);
 void CleanUpFormatIdxUsed(void);
 
-int do_table(FILE *input) {    
-	long rectype;
+int do_table(FILE *input) {
+	unsigned char recBuf[2 * MAX_MS_RECSIZE];
+	unsigned char* rec = &recBuf[MAX_MS_RECSIZE];
+
 	long reclen,build_year=0,build_rel=0,offset=0;
 	int eof_flag=0;
 	int itemsread=1;
@@ -76,7 +78,7 @@ int do_table(FILE *input) {
 				itemsread=catdoc_read(rec,reclen-offset,1,input);
 				break;
 			} else {
-				catdoc_raise_error(" Invalid BOF record");// , filename);
+				catdoc_raise_error(" Invalid BOF record");
 				return 0;
 			} 
 		} else {
@@ -84,26 +86,32 @@ int do_table(FILE *input) {
 		}
 	}
 	if (catdoc_eof(input)) {
-		catdoc_raise_error("No BOF record found");// , filename);
+		catdoc_raise_error("No BOF record found");
 		return 0;
-	}    
+	}
+	long prev_rectype = -1;
+	int unparsedSz = 0;
 	while(itemsread){
 		unsigned char buffer[2];
 
 		itemsread = catdoc_read(buffer, 2, 1, input);
 		if (catdoc_eof(input)) {
-			process_item(MSEOF,0,NULL);
+			process_xl_item(MSEOF, MSEOF, 0, NULL, &unparsedSz);
 			return 0;
 		}
 		
 		if(itemsread == 0)
 			break;
 
-		rectype=getshort(buffer,0);
+		//long offset = ftell(input);
+		long rectype=getshort(buffer,0);
+		if (rectype != CONTINUE)
+			prev_rectype = rectype;
 		itemsread = catdoc_read(buffer, 2, 1, input);
 		if(itemsread == 0)
 			break;
 		reclen=getshort(buffer,0);
+
 		if (reclen && reclen <MAX_MS_RECSIZE &&reclen >0){
 			itemsread = catdoc_read(rec, 1, reclen, input);
 			rec[reclen] = '\0';
@@ -113,8 +121,12 @@ int do_table(FILE *input) {
 				break;
 			}    
 		}
-/* 		fprintf(stderr,"Rectype 0x%04X reclen=%d\n",rectype, reclen); */
-		process_item(rectype,reclen,rec);
+		
+		//fprintf(stdout,//"[x%04X]"
+		//	           " : Rectype [%s(%s)][%d] reclen=%d\n",//offset,
+		//	CatDocXlTypesToStr(prev_rectype),
+		//	CatDocXlTypesToStr(rectype), rec[0], reclen);
+		process_xl_item(rectype, prev_rectype, reclen, rec, &unparsedSz);
 		if (rectype == MSEOF) {
 			eof_flag=1;
 		} else {
@@ -123,28 +135,40 @@ int do_table(FILE *input) {
 	}
 	return 0;
 }
-unsigned char **sst=NULL;/* Shared string table parsed into array of strings in
-														output encoding*/
-int sstsize = 0; /*Number of strings in SST*/
+//unsigned char **sst=NULL;/* Shared string table parsed into array of strings in output encoding*/
+//int sstsize = 0; /*Number of strings in SST*/
 //unsigned char *sstBuffer=NULL; /*Unparsed sst to accumulate all its parts*/
 //int sstBytes = 0; /*Size of SST Data, already accumulated in the buffer */
 int codepage=1251; /*default*/
-int prev_rectype=0;
+//int prev_rectype=0;
 /* holds a pointer to formula value, becouse value itself would be in
  * next biff record
  */
 //unsigned char **saved_reference = NULL;
 
-unsigned char* extract_xls_string(unsigned char* src);
+#define STREAM_FETCH_IMPL(X) buf += X;
+#define STREAM_FETCH(PTR, X) if (buf + X > bufEnd) return 0;unsigned char* PTR = buf;STREAM_FETCH_IMPL(X)
+#define STREAM_FETCH_VAR(VAR, TYPE, FUNC) if (buf + sizeof(TYPE) > bufEnd) return 0;TYPE VAR = FUNC(buf, 0);STREAM_FETCH_IMPL(sizeof(TYPE));VAR
+#define STREAM_PUT_BACK(X) buf -= X;
 
-void extract_sst(unsigned char* sstbuf, int bufsize) {
-	int32_t sstsize = getlong(sstbuf + 4, 0);
-	unsigned char* curString = curString = sstbuf + 8;
-	for (int i = 0; i < sstsize && curString < sstbuf + bufsize; ++i)
-		curString = extract_xls_string(curString);
+unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd);
+
+unsigned char* extract_sst_continue(unsigned char* buf, unsigned char* bufEnd)
+{
+	unsigned char* next;
+	while (next = extract_xls_string(buf, bufEnd))
+	{
+		buf = next;
+	}
+	return buf;
+}
+unsigned char* extract_sst(unsigned char* buf, unsigned char* bufEnd) {
+	STREAM_FETCH_VAR(sstUnused, int32_t, getlong);
+	STREAM_FETCH_VAR(sstSize, int32_t, getlong);
+	return extract_sst_continue(buf, bufEnd);
 }
 
-void process_item (int rectype, int reclen, unsigned char *rec) {
+void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *rec, int * unparsedSz) {
 	//if (rectype != CONTINUE && prev_rectype == SST) {
 	//	/* we have accumulated  unparsed SST, and now encountered
 	//	 * another record, which indicates that SST is ended */
@@ -160,7 +184,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	case WRITEPROT: 
 		/* File is write protected, but we only read it */
 		break;
-	case 0x42: {
+	case CODEPAGE: {
 		if (source_charset) break;
 		codepage=getshort(rec,0);
 		/*fprintf(stderr,"CODEPAGE %d\n",codepage); */
@@ -193,37 +217,20 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		break;
 	}			 
 	case SST: {
-		/* Just copy SST into buffer, and wait until we get
-		 * all CONTINUE records
-		 */
-/* 		fprintf(stderr,"SST\n"); */
-		/* If exists first SST entry, then just drop it and start new*/
-		extract_sst(rec, reclen);
-		//if (sstBuffer != NULL) 
-		//	free(sstBuffer);
-		//if (sst != NULL)
-		//	free(sst);
-		//
-		//sstBuffer=(unsigned char*)malloc(reclen);
-		//sstBytes = reclen;
-		//if (sstBuffer == NULL ) {
-		//	catdoc_raise_error("SSTptr alloc error! ");
-		//	exit(1);
-		//}	  
-		//memcpy(sstBuffer,rec,reclen);
+		unsigned char* unparsed = extract_sst(rec, rec + reclen);
+		if (!unparsed)
+			catdoc_raise_error("SST table too small");
+		*unparsedSz = rec + reclen - unparsed;
+		memcpy(rec - *unparsedSz, unparsed, *unparsedSz);
 		break;
 	}	
 	case CONTINUE: {
-		//if (prev_rectype != SST) {
-		//	return; /* to avoid changing of prev_rectype;*/
-		//}    
-		//sstBuffer=realloc(sstBuffer,sstBytes+reclen);
-		//if (sstBuffer == NULL ) {
-		//	catdoc_raise_error("SSTptr realloc error! ");
-		//	exit(1);
-		//}	  
-		//memcpy(sstBuffer+sstBytes,rec,reclen);
-		//sstBytes+=reclen;
+		if (prev_rectype != SST) {
+			return;
+		}
+		unsigned char* unparsed = extract_sst_continue(rec - *unparsedSz, rec + reclen);
+		*unparsedSz = rec + reclen - unparsed;
+		memcpy(rec - *unparsedSz, unparsed, *unparsedSz);
 		return;
 	}			   
 	case LABEL: {
@@ -235,7 +242,7 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		col = getshort(rec,2);
 		/* 		fprintf(stderr,"LABEL!\n"); */
 		//unsigned char** pcell=allocate(row,col);
-		extract_xls_string(src);
+		extract_xls_string(src, rec + reclen);
 		//*pcell = "";// copy_unicode_string(&src);
 		break;
 	}     
@@ -381,13 +388,13 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 		break;
 	}
 	case STRING: {
-		unsigned char *src=(unsigned char *)rec;
+		//unsigned char *src=(unsigned char *)rec;
 		//if (!saved_reference) {
 		//	catdoc_raise_error("String record without preceeding string formula");
 		//	break;
 		//}
 		//*saved_reference = copy_unicode_string(&src);
-		extract_xls_string(src);
+		extract_xls_string(rec, rec + reclen);
 		break;
 	}	    
 	case BOF: {
@@ -442,61 +449,77 @@ void process_item (int rectype, int reclen, unsigned char *rec) {
 	prev_rectype=rectype; 
 }  
 
-unsigned char* extract_xls_string(unsigned char* src)
+unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd)
 {
-	int flags = src[2];
+	STREAM_FETCH(hdr, 3);
+	int flags = hdr[2];
 	int count;
 	if (!(flags == 0 || flags == 1 || flags == 8 ||
 		flags == 9 || flags == 4 || flags == 5 ||
 		flags == 0x0c || flags == 0x0d)) {
-		count = src[0];
-		flags = src[1];
+		count = hdr[0];
+		flags = hdr[1];
 		if (!(flags == 0 || flags == 1 || flags == 8 ||
 			flags == 9 || flags == 4 || flags == 5 ||
 			flags == 0x0c || flags == 0x0d)) {
-			/* 			fprintf(stderr,"Strange flags = %d, returning NULL\n", flags); */
 			catdoc_raise_error("Strange XLS_STRING flags");
 			return 0;
 		}
-		src += 2;
+		STREAM_PUT_BACK(1);
 	}
 	else {
-		count = getshort(src, 0);
-		src += 3;
+		count = getshort(hdr, 0);
 	}
 
 	int charsize = (flags & 0x01) ? 2 : 1;
-	int to_skip;
+	int to_skip = 0;
 	switch (flags & 12) {
 	case 0x0c: /* Far East with RichText formating */
-		to_skip = 4 * getshort(src, 0) + getlong(src, 2);
-		src += (2 + 4);
+	{
+		STREAM_FETCH_VAR(var16, uint16_t, getshort);
+		STREAM_FETCH_VAR(var32, int32_t, getlong);
+		to_skip = 4 * var16 + var32;
 		/* 		fprintf(stderr,"Far East with RichText formating\n"); */
 		break;
-
+	}
 	case 0x08: /* With RichText formating */
-		to_skip = 4 * getshort(src, 0);
-		src += 2;
+	{
+		STREAM_FETCH_VAR(var16, uint16_t, getshort);
+		to_skip = 4 * var16;
 		/* 		fprintf(stderr,"With RichText formating %d\n",getshort(*src,2+offset)); */
 		break;
-
+	}
 	case 0x04: /* Far East */
-		to_skip = getlong(src, 0);
-		src += 4;
+	{
+		STREAM_FETCH_VAR(var32, int32_t, getlong);
+		to_skip = var32;
 		/* 		fprintf(stderr,"Far East\n"); */
 		break;
-
-	default:
-		to_skip = 0;
-		/* 		fprintf(stderr,"Default string\n"); */
+	}
 	}
 
+	STREAM_FETCH(str, count * charsize);
+	// CRUTCH for null in string
+	if (1 == charsize)
+	{
+		unsigned char* last = str;
+		for (int i = 0; i < count; ++i)
+		{
+			if (0 == str[i])
+				++count;
+			else
+				*last++ = str[i];
+		}
+		int nullCnt = &str[count] - last;
+		STREAM_FETCH_IMPL(nullCnt);
+		count -= nullCnt;
+	}
 	if (charsize == 2)
-		catdoc_output_wchars((wchar_t*)src, count);
+		catdoc_output_wchars(str, count);
 	else
-		catdoc_output_chars(src, count);
+		catdoc_output_chars(str, count);
 
-	return src + charsize * count;
+	return buf;
 }
 /*
  * Extracts string from sst and returns mallocked copy of it

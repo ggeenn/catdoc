@@ -12,148 +12,166 @@
 
 #define DATE_FORMAT              14
 
-#define MS1904  		 0x22
-#define ADDIN 		         0x87
-#define ADDMENU 		 0xC2
-#define ARRAY 		         0x221
-#define AUTOFILTER 		 0x9E
-#define AUTOFILTERINFO 		 0x9D
-#define BACKUP 		         0x40
-#define BLANK 		         0x201
-#define BOF 		         0x809
-#define BOOKBOOL 		 0xDA
-#define BOOLERR 		 0x205
-#define BOTTOMMARGIN 		 0x29
-#define BOUNDSHEET 		 0x85
-#define CALCCOUNT 		 0x0C
-#define CALCMODE 		 0x0D
-#define CODEPAGE 		 0x42
-#define COLINFO 		 0x7D
-#define CONTINUE 		 0x3C
-#define COORDLIST 		 0xA9
-#define COUNTRY 		 0x8C
-#define CRN 		         0x5A
-#define DBCELL 		         0xD7
-#define DCON 		         0x50
-#define DCONNAME 		 0x52
-#define DCONREF 		 0x51
-#define DEFAULTROWHEIGHT 	 0x225
-#define DEFCOLWIDTH 		 0x55
-#define DELMENU 		 0xC3
-#define DELTA 		         0x10
-#define DIMENSIONS 		 0x200
-#define DOCROUTE 		 0xB8
-#define EDG 		         0x88
-#define MSEOF 		         0x0A
-#define EXTERNCOUNT 		 0x16
-#define EXTERNNAME 		 0x223
-#define EXTERNSHEET 		 0x17
-#define FILEPASS 		 0x2F
-#define FILESHARING 		 0x5B
-#define FILESHARING2 		 0x1A5
-#define FILTERMODE 		 0x9B
-#define FNGROUPCOUNT 		 0x9C
-#define FNGROUPNAME 		 0x9A
-#define FONT 		         0x231
-#define FONT2 		         0x31
-#define FOOTER 		         0x15
-#define FORMAT 		         0x41E
-#define FORMULA_RELATED		 0x4BC
-#define DOUBLE_STREAM_FILE	 0x161
-/*#define FORMULA 		 0x406  Microsoft docs wrong?*/
-#define FORMULA 		 0x06
-#define GCW 		         0xAB
-#define GRIDSET 		 0x82
-#define PROT4REVPASS             0x1BC
-#define GUTS 		         0x80
-#define HCENTER 		 0x83
-#define HEADER 		         0x14
-#define HIDEOBJ 		 0x8D
-#define HORIZONTALPAGEBREAKS 	 0x1B
-#define IMDATA 		         0x7F
-#define INDEX 		         0x20B
-#define INTERFACEEND 		 0xE2
-#define INTERFACEHDR 		 0xE1
-#define ITERATION 		 0x11
-#define LABEL 		         0x204
-#define LEFTMARGIN 		 0x26
-#define LHNGRAPH 		 0x95
-#define LHRECORD 		 0x94
-#define LPR 		         0x98
-#define MMS 		         0xC1
-#define MULBLANK 		 0xBE
-#define MULRK 		         0xBD
-#define NAME 		         0x218
-#define NOTE 		         0x1C
-#define NUMBER 		         0x203
-#define OBJ 		         0x5D
-#define OBJPROTECT 		 0x63
-#define OBPROJ 		         0xD3
-#define OLESIZE 		 0xDE
-#define PALETTE 		 0x92
-#define PANE 		         0x41
-#define PASSWORD 		 0x13
-#define PLS 		         0x4D
-#define PRECISION 		 0x0E
-#define PRINTGRIDLINES 		 0x2B
-#define PRINTHEADERS 		 0x2A
-#define PROTECT 		 0x12
-#define PUB 		         0x89
-#define RECIPNAME 		 0xB9
-#define REFMODE 		 0x0F
-#define RIGHTMARGIN 		 0x27
-#define RK 		         0x27E
-#define ROW 		         0x208
-#define RSTRING 		 0xD6
-#define SAVERECALC 		 0x5F
-#define SCENARIO 		 0xAF
-#define SCENMAN 		 0xAE
-#define SCENPROTECT 		 0xDD
-#define SCL 		         0xA0
-#define SELECTION 		 0x1D
-#define SETUP 		         0xA1
-#define SHRFMLA 		 0xBC
-#define SORT 		         0x90
-#define SOUND 		         0x96
-#define STANDARDWIDTH 		 0x99
-#define STRING 		         0x207
-#define STYLE 		         0x293
-#define SUB 		         0x91
-#define SXDI 		         0xC5
-#define SXEXT 		         0xDC
-#define SXIDSTM 		 0xD5
-#define SXIVD 		         0xB4
-#define SXLI 		         0xB5
-#define SXPI 		         0xB6
-#define SXSTRING 		 0xCD
-#define SXTBL 		         0xD0
-#define SXTBPG 		         0xD2
-#define SXTBRGIITM 		 0xD1
-#define SXVD 		         0xB1
-#define SXVI 		         0xB2
-#define SXVIEW 		         0xB0
-#define SXVS 		         0xE3
-#define TABID 		         0x13D
-#define TABIDCONF 		 0xEA
-#define TABLE 		         0x236
-#define TEMPLATE 		 0x60
-#define TOPMARGIN 		 0x28
-#define UDDESC 		         0xDF
-#define UNCALCED 		 0x5E
-#define VCENTER 		 0x84
-#define VERTICALPAGEBREAKS 	 0x1A
-#define WINDOW1 		 0x3D
-#define WINDOW2 		 0x23E
-#define WINDOWPROTECT 		 0x19
-#define WRITEACCESS 		 0x5C
-#define WRITEPROT 		 0x86
-#define WSBOOL 		         0x81
-#define XCT 		         0x59
-#define XF 		         0xE0
-#define SST			 0xFC
-#define CONSTANT_STRING	         0xFD
-#define REFRESHALL		 0x1B7
-#define USESELFS		 0x160
-#define EXTSST		         0xFF
-/* Vitus additions */
-#define INTEGER_CELL 	 0x202
+#define CATDOC_XL_TYPES_FOREACH(F)                                                                    \
+F( MS1904  		 , 0x22                             ) \
+F( ADDIN 		         , 0x87                     ) \
+F( ADDMENU 		 , 0xC2                             ) \
+F( ARRAY 		         , 0x221                    ) \
+F( AUTOFILTER 		 , 0x9E                         ) \
+F( AUTOFILTERINFO 		 , 0x9D                     ) \
+F( BACKUP 		         , 0x40                     ) \
+F( BLANK 		         , 0x201                    ) \
+F( BOF 		         , 0x809                        ) \
+F( BOOKBOOL 		 , 0xDA                         ) \
+F( BOOLERR 		 , 0x205                            ) \
+F( BOTTOMMARGIN 		 , 0x29                     ) \
+F( BOUNDSHEET 		 , 0x85                         ) \
+F( CALCCOUNT 		 , 0x0C                         ) \
+F( CALCMODE 		 , 0x0D                         ) \
+F( CODEPAGE 		 , 0x42                         ) \
+F( COLINFO 		 , 0x7D                             ) \
+F( CONTINUE 		 , 0x3C                         ) \
+F( COORDLIST 		 , 0xA9                         ) \
+F( COUNTRY 		 , 0x8C                             ) \
+F( CRN 		         , 0x5A                         ) \
+F( DBCELL 		         , 0xD7                     ) \
+F( DCON 		         , 0x50                     ) \
+F( DCONNAME 		 , 0x52                         ) \
+F( DCONREF 		 , 0x51                             ) \
+F( DEFAULTROWHEIGHT 	 , 0x225                    ) \
+F( DEFCOLWIDTH 		 , 0x55                         ) \
+F( DELMENU 		 , 0xC3                             ) \
+F( DELTA 		         , 0x10                     ) \
+F( DIMENSIONS 		 , 0x200                        ) \
+F( DOCROUTE 		 , 0xB8                         ) \
+F( EDG 		         , 0x88                         ) \
+F( MSEOF 		         , 0x0A                     ) \
+F( EXTERNCOUNT 		 , 0x16                         ) \
+F( EXTERNNAME 		 , 0x223                        ) \
+F( EXTERNSHEET 		 , 0x17                         ) \
+F( FILEPASS 		 , 0x2F                         ) \
+F( FILESHARING 		 , 0x5B                         ) \
+F( FILESHARING2 		 , 0x1A5                    ) \
+F( FILTERMODE 		 , 0x9B                         ) \
+F( FNGROUPCOUNT 		 , 0x9C                     ) \
+F( FNGROUPNAME 		 , 0x9A                         ) \
+F( FONT 		         , 0x231                    ) \
+F( FONT2 		         , 0x31                     ) \
+F( FOOTER 		         , 0x15                     ) \
+F( FORMAT 		         , 0x41E                    ) \
+F( FORMULA_RELATED		 , 0x4BC                    ) \
+F( DOUBLE_STREAM_FILE	 , 0x161                    ) \
+F( FORMULA 		 , 0x06                             ) \
+F( GCW 		         , 0xAB                         ) \
+F( GRIDSET 		 , 0x82                             ) \
+F( PROT4REVPASS             , 0x1BC                 ) \
+F( GUTS 		         , 0x80                     ) \
+F( HCENTER 		 , 0x83                             ) \
+F( HEADER 		         , 0x14                     ) \
+F( HIDEOBJ 		 , 0x8D                             ) \
+F( HORIZONTALPAGEBREAKS, 0x1B                       ) \
+F( IMDATA 		         , 0x7F                     ) \
+F( INDEX 		         , 0x20B                    ) \
+F( INTERFACEEND 		 , 0xE2                     ) \
+F( INTERFACEHDR 		 , 0xE1                     ) \
+F( ITERATION 		 , 0x11                         ) \
+F( LABEL 		         , 0x204                    ) \
+F( LEFTMARGIN 		 , 0x26                         ) \
+F( LHNGRAPH 		 , 0x95                         ) \
+F( LHRECORD 		 , 0x94                         ) \
+F( LPR 		         , 0x98                         ) \
+F( MMS 		         , 0xC1                         ) \
+F( MULBLANK 		 , 0xBE                         ) \
+F( MULRK 		         , 0xBD                     ) \
+F( NAME 		         , 0x218                    ) \
+F( NOTE 		         , 0x1C                     ) \
+F( NUMBER 		         , 0x203                    ) \
+F( OBJ 		         , 0x5D                         ) \
+F( OBJPROTECT 		 , 0x63                         ) \
+F( OBPROJ 		         , 0xD3                     ) \
+F( OLESIZE 		 , 0xDE                             ) \
+F( PALETTE 		 , 0x92                             ) \
+F( PANE 		         , 0x41                     ) \
+F( PASSWORD 		 , 0x13                         ) \
+F( PLS 		         , 0x4D                         ) \
+F( PRECISION 		 , 0x0E                         ) \
+F( PRINTGRIDLINES 		 , 0x2B                     ) \
+F( PRINTHEADERS 		 , 0x2A                     ) \
+F( PROTECT 		 , 0x12                             ) \
+F( PUB 		         , 0x89                         ) \
+F( RECIPNAME 		 , 0xB9                         ) \
+F( REFMODE 		 , 0x0F                             ) \
+F( RIGHTMARGIN 		 , 0x27                         ) \
+F( RK 		         , 0x27E                        ) \
+F( ROW 		         , 0x208                        ) \
+F( RSTRING 		 , 0xD6                             ) \
+F( SAVERECALC 		 , 0x5F                         ) \
+F( SCENARIO 		 , 0xAF                         ) \
+F( SCENMAN 		 , 0xAE                             ) \
+F( SCENPROTECT 		 , 0xDD                         ) \
+F( SCL 		         , 0xA0                         ) \
+F( SELECTION 		 , 0x1D                         ) \
+F( SETUP 		         , 0xA1                     ) \
+F( SHRFMLA 		 , 0xBC                             ) \
+F( SORT 		         , 0x90                     ) \
+F( SOUND 		         , 0x96                     ) \
+F( STANDARDWIDTH 		 , 0x99                     ) \
+F( STRING 		         , 0x207                    ) \
+F( STYLE 		         , 0x293                    ) \
+F( SUB 		         , 0x91                         ) \
+F( SXDI 		         , 0xC5                     ) \
+F( SXEXT 		         , 0xDC                     ) \
+F( SXIDSTM 		 , 0xD5                             ) \
+F( SXIVD 		         , 0xB4                     ) \
+F( SXLI 		         , 0xB5                     ) \
+F( SXPI 		         , 0xB6                     ) \
+F( SXSTRING 		 , 0xCD                         ) \
+F( SXTBL 		         , 0xD0                     ) \
+F( SXTBPG 		         , 0xD2                     ) \
+F( SXTBRGIITM 		 , 0xD1                         ) \
+F( SXVD 		         , 0xB1                     ) \
+F( SXVI 		         , 0xB2                     ) \
+F( SXVIEW 		         , 0xB0                     ) \
+F( SXVS 		         , 0xE3                     ) \
+F( TABID 		         , 0x13D                    ) \
+F( TABIDCONF 		 , 0xEA                         ) \
+F( TABLE 		         , 0x236                    ) \
+F( TEMPLATE 		 , 0x60                         ) \
+F( TOPMARGIN 		 , 0x28                         ) \
+F( UDDESC 		         , 0xDF                     ) \
+F( UNCALCED 		 , 0x5E                         ) \
+F( VCENTER 		 , 0x84                             ) \
+F( VERTICALPAGEBREAKS 	 , 0x1A                     ) \
+F( WINDOW1 		 , 0x3D                             ) \
+F( WINDOW2 		 , 0x23E                            ) \
+F( WINDOWPROTECT 		 , 0x19                     ) \
+F( WRITEACCESS 		 , 0x5C                         ) \
+F( WRITEPROT 		 , 0x86                         ) \
+F( WSBOOL 		         , 0x81                     ) \
+F( XCT 		         , 0x59                         ) \
+F( XF 		         , 0xE0                         ) \
+F( SST			 , 0xFC                             ) \
+F( CONSTANT_STRING	         , 0xFD                 ) \
+F( REFRESHALL		 , 0x1B7                        ) \
+F( USESELFS		 , 0x160                            ) \
+F( EXTSST		         , 0xFF                     ) \
+F( INTEGER_CELL 	 , 0x202                        )
+
+#define CATDOC_XL_TYPES_ENUM(NAME, NUM) NAME = NUM,
+
+enum CatDocXlTypes
+{
+    CATDOC_XL_TYPES_FOREACH(CATDOC_XL_TYPES_ENUM)
+};
+
+#define CATDOC_XL_TYPES_STR_CASE(NAME, NUM) case NUM: return #NAME;
+inline char* CatDocXlTypesToStr(int type)
+{
+    switch (type)
+    {
+        CATDOC_XL_TYPES_FOREACH(CATDOC_XL_TYPES_STR_CASE)
+    }
+    static char buf[10];
+    sprintf(buf, "0x%x", type);
+    return buf;
+}

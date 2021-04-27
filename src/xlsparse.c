@@ -19,6 +19,7 @@
 #ifndef HAVE_STRFTIME
 #include "../compat/strftime.h"
 #endif
+#include "mstream.h"
 
 int biff_version=0;
 short int *formatTable=NULL;
@@ -103,7 +104,7 @@ int do_table(FILE *input) {
 		if(itemsread == 0)
 			break;
 
-		//long offset = ftell(input);
+		//long offset = catdoc_tell(input);
 		long rectype=getshort(buffer,0);
 		if (rectype != CONTINUE)
 			prev_rectype = rectype;
@@ -145,11 +146,6 @@ int codepage=1251; /*default*/
  * next biff record
  */
 //unsigned char **saved_reference = NULL;
-
-#define STREAM_FETCH_IMPL(X) buf += X;
-#define STREAM_FETCH(PTR, X) if (buf + X > bufEnd) return 0;unsigned char* PTR = buf;STREAM_FETCH_IMPL(X)
-#define STREAM_FETCH_VAR(VAR, TYPE, FUNC) if (buf + sizeof(TYPE) > bufEnd) return 0;TYPE VAR = FUNC(buf, 0);STREAM_FETCH_IMPL(sizeof(TYPE));VAR
-#define STREAM_PUT_BACK(X) buf -= X;
 
 unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd);
 

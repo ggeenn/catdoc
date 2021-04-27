@@ -20,6 +20,7 @@
 #include "ppt.h"
 #include "catdoc.h"
 #include "ppttypes.h"
+#include "mstream.h"
 
 void catdoc_output_chars(unsigned char* buffer, size_t bufferSz);
 void catdoc_raise_error(const char* reason);
@@ -41,20 +42,21 @@ static void start_text_out(void);
  * @param filename 
  */
 
-enum {START_FILE,START_SLIDE,TEXTOUT,END_FILE} slide_state ;
+//enum {START_FILE,START_SLIDE,TEXTOUT,END_FILE} slide_state ;
 
-static void start_text_out(void) {
-	if (slide_state == START_SLIDE) {
-		catdoc_output_chars(" ", 1);// fputs(slide_separator, stdout);
-	}
-	slide_state = TEXTOUT;
-}	
+//static void start_text_out(void) {
+//	if (slide_state == START_SLIDE) {
+//		catdoc_output_chars(" ", 1);// fputs(slide_separator, stdout);
+//	}
+//	slide_state = TEXTOUT;
+//}	
 int do_ppt(FILE *input) {
 	int itemsread=1;
 	int rectype;
 	long reclen;
 	unsigned char recbuf[8];
-	slide_state = START_FILE;
+	//slide_state = START_FILE;
+	//int skipState = EmptySkipState;
 	while(itemsread) {
 		itemsread = catdoc_read(recbuf, 1, 8, input);
 /* 		fprintf(stderr,"itemsread=%d: ",itemsread); */
@@ -84,26 +86,75 @@ void printify(unsigned char* buf, int len)
 		if (!isprint(buf[i]))
 			buf[i] = ' ';
 }
-/** 
- * 
- * 
- * @param rectype 
- * @param reclen 
- * @param input 
- */
-static void process_item (int rectype, long reclen, FILE* input) {
+void read_type_block(unsigned char* buf, size_t len, FILE* input)
+{
+	if (len > MAX_MS_RECSIZE)
+		catdoc_raise_error("Reclen isn't suite MAX_MS_RECSIZE buffer");
+	size_t res = catdoc_read(buf, 1, len, input);
+	if (res != len)
+		catdoc_raise_error("Can't read");
+}
+unsigned char* extract_client_textbox(unsigned char* buf, unsigned char* bufEnd)
+{
+	STREAM_FETCH_VAR(u0, uint32_t, getulong);
+	STREAM_FETCH_VAR(u4, uint32_t, getulong);
+	STREAM_FETCH_VAR(type, uint32_t, getulong);
+	//uint32_t type = getulong(buf, 8);
+	STREAM_FETCH_IMPL(2);
+	STREAM_FETCH_VAR(subtype, uint16_t, getshort);
+	//uint16_t subtype = getshort(buf, 14);
+	STREAM_FETCH_VAR(len, uint32_t, getulong);
+	//uint32_t len = getulong(buf, 16);
+	STREAM_FETCH(str, len);
+	//unsigned char* str = buf + 20;
+	//printify(str, len);
+	//printf("FRAME_D [0x%x - 0x%x] %d bytes => [%s]\n", type, subtype, reclen, str);
+	if (PPDRAWING_FRAME_D_TYPE_STR == type || 4 == type)
+	{
+		switch (subtype)
+		{
+		case PPDRAWING_FRAME_D_SUBTYPE_CSTR:
+			catdoc_output_chars(str, len);
+			break;
+		case PPDRAWING_FRAME_D_SUBTYPE_WSTR:
+			catdoc_output_wchars(str, len / 2);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void process_item (int rectype, long reclen, FILE* input/*, int* skipState*/) {
 	int i=0;
-	static unsigned char buf[2];
-	//fprintf(stderr,"Processing record %d length %d\n",rectype,reclen);
- 
+	unsigned char buf[MAX_MS_RECSIZE];
+
+	//long offset = catdoc_tell(input);
+	//fprintf(stdout,"[x%04X]"
+	//	           " : Rectype [%s] reclen=x%04X\n",offset,
+	//	CatDocPptTypesToStr(rectype), reclen);
+
+	//switch (rectype)
+	//{
+	//case TEXT_BYTES_ATOM:
+	//case TEXT_CHARS_ATOM:
+	//case CSTRING:
+	//case TEXT_HEADER_ATOM:
+	//case DFF_msofbtClientTextbox:
+	//	break;
+	//default:
+	//	*skipState = EmptySkipState;
+	//	break;
+	//}
+
 	switch(rectype) {
 	case DOCUMENT_END:
 /* 		fprintf(stderr,"End of document, ended at %ld\n",catdoc_tell(input)); */
 		catdoc_seek(input, reclen, SEEK_CUR);
-		if (slide_state == TEXTOUT) {
-			catdoc_output_chars(" ", 1); //fputs(slide_separator,stdout);
-			slide_state = END_FILE;
-		}	
+		//if (slide_state == TEXTOUT) {
+		//	catdoc_output_chars(" ", 1); //fputs(slide_separator,stdout);
+		//	slide_state = END_FILE;
+		//}	
 		break;
 
 	case DOCUMENT:
@@ -158,29 +209,18 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		
 	case TEXT_BYTES_ATOM: {
 /* 			fprintf(stderr,"TextBytes, reclen=%ld\n", reclen); */
-			start_text_out();
-			for(i=0; i < reclen; i++) {
-				catdoc_read(buf,1,1,input);
-				if ((unsigned char)*buf != 0x0d)
-					catdoc_output_chars(convert_char((unsigned char)*buf), 1);
-				else
-					catdoc_output_chars(" ", 1);
-			}
+			//start_text_out();
+			read_type_block(buf, reclen, input);
+			//if (*skipState != NeedSkipState)
+			catdoc_output_chars(buf, reclen);
 		}
 		break;
 		
 	case TEXT_CHARS_ATOM: 
 	case CSTRING: {
-		uint16_t* buf = malloc(reclen);
-		start_text_out();
-		size_t actual = catdoc_read(buf, 1, reclen, input);
-		if (actual != reclen)
-		{
-			free(buf);
-			catdoc_raise_error("Wrong ppt CSTRING/ATOM size");
-		}
-		catdoc_output_wchars(buf, actual/2);
-		free(buf);
+		read_type_block(buf, reclen, input);
+		//if(*skipState != NeedSkipState)
+		catdoc_output_wchars(buf, reclen/2);
 	}
 		break;
 		
@@ -269,16 +309,22 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		break;
 
 	case SLIDE_PERSIST_ATOM:
-		if (slide_state != START_FILE) {
-			slide_state = START_SLIDE;
-		}	
+		//if (slide_state != START_FILE) {
+		//	slide_state = START_SLIDE;
+		//}	
 		catdoc_seek(input, reclen, SEEK_CUR);
 		break;
 
-	case TEXT_HEADER_ATOM:
+	case TEXT_HEADER_ATOM: {
 /* 		fprintf(stderr,"TextHeaderAtom, reclen=%ld\n", reclen); */
 		catdoc_seek(input, reclen, SEEK_CUR);
-		break;
+		//read_type_block(buf, reclen, input);
+		//uint32_t val = getulong(buf, 0);
+		//if (*skipState == TextBoxSkipState && val != 4)
+		//	*skipState = NeedSkipState;
+		//fprintf(stderr, "TextHeaderAtom, value=%ld\n", val);
+	}
+	break;
 
 	case TEXT_SPEC_INFO:
 /* 		fprintf(stderr,"TextSpecInfo, reclen=%ld\n", reclen); */
@@ -306,43 +352,8 @@ static void process_item (int rectype, long reclen, FILE* input) {
 		break;
 	case PPDRAWING_FRAME_4:
 		break;
-
-	case PPDRAWING_FRAME_D: {
-		unsigned char* buf = malloc(reclen);
-		unsigned char* bufEnd = buf + reclen;
-		size_t res = catdoc_read(buf, 1, reclen, input);
-		if (res != reclen)
-		{
-			free(buf);
-			catdoc_raise_error("Wrong ppt PPDRAWING_FRAME_D size");
-		}
-
-		uint32_t type = getulong(buf, 8);
-		uint16_t subtype = getshort(buf, 14);
-		uint32_t len = getulong(buf, 16);
-		unsigned char* str = buf + 20;
-		//printify(str, len);
-		//printf("FRAME_D [0x%x - 0x%x] %d bytes => [%s]\n", type, subtype, reclen, str);
-		if (PPDRAWING_FRAME_D_TYPE_STR == type)
-		{
-			if (len > bufEnd - str)
-			{
-				free(buf);
-				catdoc_raise_error("Wrong ppt PPDRAWING_FRAME_D size");
-			}
-			switch(subtype)
-			{
-			case PPDRAWING_FRAME_D_SUBTYPE_CSTR:
-				catdoc_output_chars(str, len);
-				break;
-			case PPDRAWING_FRAME_D_SUBTYPE_WSTR:
-				catdoc_output_wchars(str, len/2);
-				break;
-			default:
-				break;
-			}
-		}
-		free(buf);
+	case DFF_msofbtClientTextbox: {
+		//*skipState = TextBoxSkipState;
 	}
 		break;
 

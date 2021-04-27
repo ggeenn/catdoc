@@ -171,7 +171,7 @@ inline char* CatDocXlTypesToStr(int type)
     {
         CATDOC_XL_TYPES_FOREACH(CATDOC_XL_TYPES_STR_CASE)
     }
-    static char buf[10];
+    static char buf[50];
     sprintf(buf, "0x%x", type);
     return buf;
 }

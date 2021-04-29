@@ -24,7 +24,7 @@ F(SLIDE_BASE, 1004) \
 F(SLIDE_BASE_ATOM, 1005) \
 F(SLIDE, 1006) \
 F(SLIDE_ATOM, 1007) \
-F(NOTES, 1008, ) \
+F(NOTES, 1008) \
 F(NOTES_ATOM, 1009) \
 F(ENVIRONMENT, 1010) \
 F(SLIDE_PERSIST_ATOM, 1011) \
@@ -75,7 +75,8 @@ enum CatDocPptTypes
 };
 
 #define CATDOC_PPT_TYPES_STR_CASE(NAME, NUM) case NUM: return #NAME;
-inline char* CatDocPptTypesToStr(int type)
+
+char* CatDocPptTypesToStr(int type)
 {
     switch (type)
     {

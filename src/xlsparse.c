@@ -31,7 +31,7 @@ double date_shift = 25569.0;
 #define MK_FORMAT(x) FLT_FORMAT("%.",x,"g") 			
 char number_format[8]=MK_FORMAT(DBL_DIG);
 
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 void CleanUpFormatIdxUsed(void);
 
 int do_table(FILE *input) {
@@ -79,26 +79,24 @@ int do_table(FILE *input) {
 				itemsread=catdoc_read(rec,reclen-offset,1,input);
 				break;
 			} else {
-				catdoc_raise_error(" Invalid BOF record");
-				return 0;
+				return catdoc_raise_error(" Invalid BOF record");
 			} 
 		} else {
 			itemsread=catdoc_read(rec,126,1,input);
 		}
 	}
 	if (catdoc_eof(input)) {
-		catdoc_raise_error("No BOF record found");
-		return 0;
+		return catdoc_raise_error("No BOF record found");
 	}
 	long prev_rectype = -1;
 	int unparsedSz = 0;
+	int retcode = 0;
 	while(itemsread){
 		unsigned char buffer[2];
 
 		itemsread = catdoc_read(buffer, 2, 1, input);
 		if (catdoc_eof(input)) {
-			process_xl_item(MSEOF, MSEOF, 0, NULL, &unparsedSz);
-			return 0;
+			return process_xl_item(MSEOF, MSEOF, 0, NULL, &unparsedSz);
 		}
 		
 		if(itemsread == 0)
@@ -127,7 +125,9 @@ int do_table(FILE *input) {
 		//	           " : Rectype [%s(%s)][%d] reclen=%d\n",//offset,
 		//	CatDocXlTypesToStr(prev_rectype),
 		//	CatDocXlTypesToStr(rectype), rec[0], reclen);
-		process_xl_item(rectype, prev_rectype, reclen, rec, &unparsedSz);
+		retcode = process_xl_item(rectype, prev_rectype, reclen, rec, &unparsedSz);
+		if (retcode)
+			return retcode;
 		if (rectype == MSEOF) {
 			eof_flag=1;
 		} else {
@@ -147,24 +147,27 @@ int codepage=1251; /*default*/
  */
 //unsigned char **saved_reference = NULL;
 
-unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd);
+int extract_xls_string(unsigned char** pBuf, unsigned char* bufEnd);
 
-unsigned char* extract_sst_continue(unsigned char* buf, unsigned char* bufEnd)
+int extract_sst_continue(unsigned char** pBuf, unsigned char* bufEnd)
 {
-	unsigned char* next;
-	while (next = extract_xls_string(buf, bufEnd))
+	int err = STREAM_SUCCESS;
+	while (err == STREAM_SUCCESS)
 	{
-		buf = next;
+		err = extract_xls_string(pBuf, bufEnd);
 	}
-	return buf;
+	return err;
 }
-unsigned char* extract_sst(unsigned char* buf, unsigned char* bufEnd) {
+int extract_sst(unsigned char** pBuf, unsigned char* bufEnd)
+{
+	unsigned char* buf = *pBuf;
 	STREAM_FETCH_VAR(sstUnused, int32_t, getlong);
 	STREAM_FETCH_VAR(sstSize, int32_t, getlong);
-	return extract_sst_continue(buf, bufEnd);
+	*pBuf = buf;
+	return extract_sst_continue(pBuf, bufEnd);
 }
 
-void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *rec, int * unparsedSz) {
+int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *rec, int * unparsedSz) {
 	//if (rectype != CONTINUE && prev_rectype == SST) {
 	//	/* we have accumulated  unparsed SST, and now encountered
 	//	 * another record, which indicates that SST is ended */
@@ -173,7 +176,7 @@ void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *
 	//}	
 	switch (rectype) {
 	case FILEPASS: {
-		catdoc_raise_error("File is encrypted");
+		return catdoc_raise_error("File is encrypted");
 		//exit(69);
 		break;
 	}
@@ -213,21 +216,33 @@ void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *
 		break;
 	}			 
 	case SST: {
-		unsigned char* unparsed = extract_sst(rec, rec + reclen);
-		if (!unparsed)
-			catdoc_raise_error("SST table too small");
+		unsigned char* unparsed = rec;
+		int err = extract_sst(&unparsed, rec + reclen);
+		if (err == STREAM_FATAL_ERROR)
+		{
+			catdoc_raise_error("Can't parse XLS_SST");
+			prev_rectype = CONTINUE;
+			return 0;
+		}
 		*unparsedSz = rec + reclen - unparsed;
 		memcpy(rec - *unparsedSz, unparsed, *unparsedSz);
 		break;
 	}	
 	case CONTINUE: {
 		if (prev_rectype != SST) {
-			return;
+			return 0;
 		}
-		unsigned char* unparsed = extract_sst_continue(rec - *unparsedSz, rec + reclen);
+		unsigned char* unparsed = rec - *unparsedSz;
+		int err = extract_sst_continue(&unparsed, rec + reclen);
+		if (err == STREAM_FATAL_ERROR)
+		{
+			catdoc_raise_error("Can't continue XLS_SST");
+			prev_rectype = CONTINUE;
+			return 0;
+		}
 		*unparsedSz = rec + reclen - unparsed;
 		memcpy(rec - *unparsedSz, unparsed, *unparsedSz);
-		return;
+		return 0;
 	}			   
 	case LABEL: {
 		int row,col;
@@ -238,7 +253,7 @@ void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *
 		col = getshort(rec,2);
 		/* 		fprintf(stderr,"LABEL!\n"); */
 		//unsigned char** pcell=allocate(row,col);
-		extract_xls_string(src, rec + reclen);
+		extract_xls_string(&src, rec + reclen);
 		//*pcell = "";// copy_unicode_string(&src);
 		break;
 	}     
@@ -390,7 +405,8 @@ void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *
 		//	break;
 		//}
 		//*saved_reference = copy_unicode_string(&src);
-		extract_xls_string(rec, rec + reclen);
+		unsigned char* buf = rec;
+		extract_xls_string(&buf, rec + reclen);
 		break;
 	}	    
 	case BOF: {
@@ -410,7 +426,7 @@ void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *
 														(formatTableSize+=16)*sizeof(short int));
 					  	  
 				if (!formatTable) {
-					catdoc_raise_error("Out of memory for format table");
+					return catdoc_raise_error("Out of memory for format table");
 					//exit (1);
 				}	  
 			}	
@@ -437,29 +453,36 @@ void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *
 		break;
 	}
 	default: {
-#if	0	
-		fprintf(stderr,"Unknown record 0x%x\n length %d\n",rectype,reclen);		
+#if	0
+		fprintf(stderr,"Unknown record 0x%x\n length %d\n",rectype,reclen);
 #endif 
 	}
 	}
 	prev_rectype=rectype; 
+	return 0;
 }  
 
-unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd)
+int is_valid_xls_string_flags(unsigned char flags)
 {
+	if (flags > 0x0f)
+		return 0;
+	return (flags & 0x02) == 0;
+}
+
+int extract_xls_string(unsigned char** pBuf, unsigned char* bufEnd)
+{
+	unsigned char* buf = *pBuf;
 	STREAM_FETCH(hdr, 3);
-	int flags = hdr[2];
+	unsigned char flags = hdr[2];
 	int count;
-	if (!(flags == 0 || flags == 1 || flags == 8 ||
-		flags == 9 || flags == 4 || flags == 5 ||
-		flags == 0x0c || flags == 0x0d)) {
+	if (!is_valid_xls_string_flags(flags))
+	{
 		count = hdr[0];
 		flags = hdr[1];
-		if (!(flags == 0 || flags == 1 || flags == 8 ||
-			flags == 9 || flags == 4 || flags == 5 ||
-			flags == 0x0c || flags == 0x0d)) {
+		if (!is_valid_xls_string_flags(flags))
+		{
 			catdoc_raise_error("Strange XLS_STRING flags");
-			return 0;
+			return STREAM_FATAL_ERROR;
 		}
 		STREAM_PUT_BACK(1);
 	}
@@ -469,7 +492,7 @@ unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd)
 
 	int charsize = (flags & 0x01) ? 2 : 1;
 	int to_skip = 0;
-	switch (flags & 12) {
+	switch (flags & 0x0c) {
 	case 0x0c: /* Far East with RichText formating */
 	{
 		STREAM_FETCH_VAR(var16, uint16_t, getshort);
@@ -515,7 +538,8 @@ unsigned char* extract_xls_string(unsigned char* buf, unsigned char* bufEnd)
 	else
 		catdoc_output_chars(str, count);
 
-	return buf;
+	*pBuf = buf + to_skip;
+	return STREAM_SUCCESS;
 }
 /*
  * Extracts string from sst and returns mallocked copy of it

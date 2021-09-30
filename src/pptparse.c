@@ -23,11 +23,11 @@
 #include "mstream.h"
 
 void catdoc_output_chars(unsigned char* buffer, size_t bufferSz);
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 
 char *slide_separator = "\f"; 
 
-static void process_item (int rectype, long reclen, FILE* input);
+static int process_item (int rectype, long reclen, FILE* input);
 
 #if !defined(min)
 #define min(x,y) ((x) < (y) ? (x) : (y))
@@ -54,6 +54,7 @@ int do_ppt(FILE *input) {
 	int itemsread=1;
 	int rectype;
 	long reclen;
+	int retcode = 0;
 	unsigned char recbuf[8];
 	//slide_state = START_FILE;
 	//int skipState = EmptySkipState;
@@ -65,17 +66,20 @@ int do_ppt(FILE *input) {
 /* 		fprintf(stderr,"\n"); */
 		
 		if (catdoc_eof(input)) {
-			process_item(DOCUMENT_END,0,input);
-			return 0;
+			return process_item(DOCUMENT_END,0,input);
 		}
 		if(itemsread < 8)
 			break;
 		rectype=getshort(recbuf,2);
 		reclen=getulong(recbuf,4);
 		if (reclen < 0) {
-			catdoc_raise_error("PPT wrong format, block size is negative");
+			return catdoc_raise_error("PPT wrong format, block size is negative");
 		}	
-		process_item(rectype,reclen,input);
+		retcode = process_item(rectype, reclen, input);
+		if (retcode != 0)
+		{
+			return retcode;
+		}
 	}
 	return 0;
 }
@@ -86,26 +90,27 @@ void printify(unsigned char* buf, int len)
 		if (!isprint(buf[i]))
 			buf[i] = ' ';
 }
-void read_type_block(unsigned char* buf, size_t len, FILE* input)
+int  read_type_block(unsigned char* buf, size_t len, FILE* input)
 {
 	if (len > MAX_MS_RECSIZE)
-		catdoc_raise_error("Reclen isn't suite MAX_MS_RECSIZE buffer");
+		return catdoc_raise_error("Reclen isn't suite MAX_MS_RECSIZE buffer");
 	size_t res = catdoc_read(buf, 1, len, input);
 	if (res != len)
-		catdoc_raise_error("Can't read");
+		return catdoc_raise_error("Can't read");
+	return 0;
 }
 unsigned char* extract_client_textbox(unsigned char* buf, unsigned char* bufEnd)
 {
-	STREAM_FETCH_VAR(u0, uint32_t, getulong);
-	STREAM_FETCH_VAR(u4, uint32_t, getulong);
-	STREAM_FETCH_VAR(type, uint32_t, getulong);
+	STREAM_FETCH_VAR_ERR(u0, uint32_t, getulong, 0);
+	STREAM_FETCH_VAR_ERR(u4, uint32_t, getulong, 0);
+	STREAM_FETCH_VAR_ERR(type, uint32_t, getulong, 0);
 	//uint32_t type = getulong(buf, 8);
 	STREAM_FETCH_IMPL(2);
-	STREAM_FETCH_VAR(subtype, uint16_t, getshort);
+	STREAM_FETCH_VAR_ERR(subtype, uint16_t, getshort, 0);
 	//uint16_t subtype = getshort(buf, 14);
-	STREAM_FETCH_VAR(len, uint32_t, getulong);
+	STREAM_FETCH_VAR_ERR(len, uint32_t, getulong, 0);
 	//uint32_t len = getulong(buf, 16);
-	STREAM_FETCH(str, len);
+	STREAM_FETCH_ERR(str, len, 0);
 	//unsigned char* str = buf + 20;
 	//printify(str, len);
 	//printf("FRAME_D [0x%x - 0x%x] %d bytes => [%s]\n", type, subtype, reclen, str);
@@ -123,10 +128,12 @@ unsigned char* extract_client_textbox(unsigned char* buf, unsigned char* bufEnd)
 			break;
 		}
 	}
+	return NULL;
 }
 
-static void process_item (int rectype, long reclen, FILE* input/*, int* skipState*/) {
+static int process_item (int rectype, long reclen, FILE* input/*, int* skipState*/) {
 	int i=0;
+	int retcode = 0;
 	unsigned char buf[MAX_MS_RECSIZE];
 
 	//long offset = catdoc_tell(input);
@@ -210,7 +217,11 @@ static void process_item (int rectype, long reclen, FILE* input/*, int* skipStat
 	case TEXT_BYTES_ATOM: {
 /* 			fprintf(stderr,"TextBytes, reclen=%ld\n", reclen); */
 			//start_text_out();
-			read_type_block(buf, reclen, input);
+			retcode = read_type_block(buf, reclen, input);
+			if (retcode)
+			{
+				return retcode;
+			}
 			//if (*skipState != NeedSkipState)
 			catdoc_output_chars(buf, reclen);
 		}
@@ -218,7 +229,11 @@ static void process_item (int rectype, long reclen, FILE* input/*, int* skipStat
 		
 	case TEXT_CHARS_ATOM: 
 	case CSTRING: {
-		read_type_block(buf, reclen, input);
+		retcode = read_type_block(buf, reclen, input);
+		if (retcode)
+		{
+			return retcode;
+		}
 		//if(*skipState != NeedSkipState)
 		catdoc_output_wchars(buf, reclen/2);
 	}
@@ -363,5 +378,5 @@ static void process_item (int rectype, long reclen, FILE* input/*, int* skipStat
 		catdoc_seek(input, reclen, SEEK_CUR);
 
 	}
-	
+	return 0;
 }

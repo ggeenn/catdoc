@@ -23,7 +23,7 @@
 #include <glob.h>
 #endif
 
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 
 /************************************************************************/
 /*  Copies component of string starting with p and ending one char      */
@@ -127,7 +127,7 @@ char *stradd(const char *s1,const char *s2)
 { char *res;
 	res=malloc(strlen(s1)+strlen(s2)+1);
 	if (!res) {
-		catdoc_raise_error("Out of memory!");
+		return NULL;
 		//exit(1);
 	}
 	strcpy(res,s1);

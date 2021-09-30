@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include "catdoc.h"
 
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 
 char *charset_path=CHARSETPATH;
 char *source_csname=SOURCE_CHARSET, *dest_csname=TARGET_CHARSET;
@@ -137,8 +137,7 @@ int get_utf16lsb (FILE *f,long *offset,long fileend) {
     int result;
 	result=catdoc_read(buf, 1, 2, f);
 	if (result<0) {
-		catdoc_raise_error("read:");
-		exit(1);
+		return catdoc_raise_error("read:");
 	}
 	if (result !=2) {
 		return EOF;
@@ -156,8 +155,7 @@ int get_utf16msb (FILE *f,long *offset,long fileend) {
     int result;
 	result=catdoc_read(buf, 1, 2, f);
 	if (result<0) {
-		catdoc_raise_error("read:");
-		exit(1);
+		return catdoc_raise_error("read:");
 	}
 	if (result !=2) {
 		return EOF;
@@ -172,8 +170,7 @@ int get_utf8 (FILE *f,long *offset,long fileend) {
     int result;
 	result=catdoc_read(buf, 1, 1, f);
 	if (result<0) {
-		catdoc_raise_error("read");
-		exit(1);
+		return catdoc_raise_error("read");
 	}	
 	if (result==0) return EOF;
 	c=buf[0];

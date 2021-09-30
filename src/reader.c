@@ -22,7 +22,7 @@ static int buf_is_unicode;
 /*  which have been already read by format recognition code, but should   */
 /*  be output anyway                                                      */
 /**************************************************************************/
-void copy_out (FILE *f,char *header) {
+int copy_out (FILE *f,char *header) {
 	char *buf=(char *)buffer;
 	int count,i;
 	long offset;
@@ -71,7 +71,9 @@ void copy_out (FILE *f,char *header) {
 		}	    
 		while (!catdoc_eof(f)) {
 			i=get_unicode_char(f,&offset,0x7FFFFFFF); 
-			if (i != EOF) catdoc_output_chars/*fputs*/(convert_char(i), 1);// , stdout);
+			if (i == EOF)
+				return i;
+			catdoc_output_chars/*fputs*/(convert_char(i), 1);// , stdout);
 		}    
 	} else {
 		for (i=0;i<8;i++) {
@@ -85,6 +87,7 @@ void copy_out (FILE *f,char *header) {
 			}		       
 		}
 	} 
+	return 0;
 } 
 /**************************************************************************/
 /*  process_file - main process engine. Reads word file using function,   */

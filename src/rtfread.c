@@ -14,7 +14,7 @@
 #include <string.h>
 #include "catdoc.h"
 
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 
 /********************************************************
  * Datatypes declaration
@@ -201,8 +201,7 @@ int parse_rtf(FILE *f) {
 	current_charset=source_charset;
 	fseek(f,0,SEEK_SET);
 	if((groups=(RTFGroupData*)calloc(group_store,sizeof(RTFGroupData))) == NULL ) {
-		catdoc_raise_error("Can\'t allocate memory: ");
-		return 1;
+		return catdoc_raise_error("Can\'t allocate memory: ");
 	}
 	groups[0].uc = 2; /* DEfault uc = 2 */
 	while ( !feof(f) ) {
@@ -321,8 +320,7 @@ int parse_rtf(FILE *f) {
 				if((groups=(RTFGroupData*)realloc(groups,
 												  group_store*sizeof(RTFGroupData)))
 				   == NULL ) {
-					catdoc_raise_error("Can\'t allocate memory: ");
-					return 1;
+					return catdoc_raise_error("Can\'t allocate memory: ");
 				}
 			}
 			if (para_mode)

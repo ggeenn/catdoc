@@ -12,7 +12,7 @@
 #include <string.h>
 #include "xls.h"
 
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 
 struct rowdescr *rowptr=NULL;
 int startrow=0,lastrow=0;

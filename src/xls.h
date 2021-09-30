@@ -34,7 +34,7 @@ char *format_int(int value,int format_code);
 char *format_rk(unsigned char *rec,short int format_code);
 char *gettypename(long rectype);
 //void parse_sst(unsigned char *sstbuf,int bufsize);
-void process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *rec, int* unparsedSz);
+int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *rec, int* unparsedSz);
 //unsigned char **allocate(int row,int col);
 //unsigned char *copy_unicode_string(unsigned char **src);
 char convert8to8(char *src,int count);

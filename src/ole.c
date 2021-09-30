@@ -25,7 +25,7 @@
 #undef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-void catdoc_raise_error(const char* reason);
+int catdoc_raise_error(const char* reason);
 long int sectorSize, shortSectorSize;
 /* BBD Info */
 long int  bbdNumBlocks;

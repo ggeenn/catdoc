@@ -798,11 +798,15 @@ time_t float2date(double d);
  */ 
 
 char *number2string(double d,short int format_code) { 
-	static char buffer [128];
+	char buffer[128] = {0};
 	char *datefmt;
 	if ((datefmt=isDateFormat(format_code))!=NULL) {
-		time_t t = float2date(d);	
-		strftime(buffer, 127,datefmt, gmtime(&t));  
+		time_t t = float2date(d);
+		struct tm* ptr = gmtime(&t);
+		if (ptr)
+		{
+			strftime(buffer, 127, datefmt, ptr);
+		}
 	} else {
 		sprintf(buffer,number_format,d);
 	}

@@ -320,7 +320,8 @@ int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *r
 		//unsigned char** pcell=allocate(row,col);
 		//*pcell=(unsigned char *)strdup(format_double(rec,6,getshort(rec,4)));
 
-		char* str = format_double(rec, 6, getshort(rec, 4));
+		char str[128] = { 0 };
+		format_double(rec, 6, getshort(rec, 4), str, sizeof(str));
 		catdoc_output_chars(str, strlen(str));
 		break;
 	}
@@ -332,7 +333,11 @@ int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *r
 		//col = getshort(rec,2);
 		//pcell=allocate(row,col);
 		//*pcell=(unsigned char *)strdup(format_int(getshort(rec,7),getshort(rec,4)));
-		char* str = format_int(getshort(rec, 7), getshort(rec, 4));
+		
+		int value = getshort(rec, 7);
+		//int format = getshort(rec, 4);
+		char str[12] = { 0 };
+		sprintf(str, "%i", value);
 		catdoc_output_chars(str, strlen(str));
 		break;
 
@@ -347,7 +352,8 @@ int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *r
 		//unsigned char** pcell=allocate(row,col);
 		format_code = getshort(rec,4);
 		//*pcell=(unsigned char *)strdup(format_rk(rec+6,format_code));
-		char* str = format_rk(rec + 6, format_code);
+		char str[128] = { 0 };
+		format_rk(rec + 6, format_code, str, sizeof(str));
 		catdoc_output_chars(str, strlen(str));
 		break;
 	}
@@ -363,7 +369,8 @@ int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *r
 			//pcell=allocate(row,col);
 			format_code=getshort(rec,offset);
 			//*pcell=(unsigned char *)strdup(format_rk(rec+offset+2,format_code));
-			char* str = format_rk(rec + offset + 2, format_code);
+			char str[128] = { 0 };
+			format_rk(rec + offset + 2, format_code, str, sizeof(str));
 			catdoc_output_chars(str, strlen(str));
 		}		 
 		break;
@@ -393,7 +400,8 @@ int process_xl_item (int rectype, int prev_rectype, int reclen, unsigned char *r
 		} else {
 			int format_code=getshort(rec,4);
 			//*pcell=(unsigned char *)strdup(format_double(rec,6,format_code));
-			unsigned char* str = format_double(rec, 6, format_code);
+			char str[128] = { 0 };
+			format_double(rec, 6, format_code, str, sizeof(str));
 			catdoc_output_chars(str, strlen(str));
 		}		 
 		break;
@@ -797,23 +805,21 @@ time_t float2date(double d);
  * Extracts floating point value and formats it 
  */ 
 
-char *number2string(double d,short int format_code) { 
-	char buffer[128] = {0};
+void number2string(double d, short int format_code, char* buff, int buff_sz) { 
 	char *datefmt;
 	if ((datefmt=isDateFormat(format_code))!=NULL) {
 		time_t t = float2date(d);
 		struct tm* ptr = gmtime(&t);
 		if (ptr)
 		{
-			strftime(buffer, 127, datefmt, ptr);
+			strftime(buff, buff_sz - 1, datefmt, ptr);
 		}
 	} else {
-		sprintf(buffer,number_format,d);
+		sprintf(buff, number_format,d);
 	}
-	return buffer;
 }
 		
-char *format_double(unsigned char *rec,int offset,int format_code) {	
+void format_double(unsigned char *rec, int offset, int format_code, char* buff, int buff_sz) {
 	union { unsigned char cc[8];
 		double d;} dconv;
 	unsigned char *d,*s; 
@@ -825,21 +831,21 @@ char *format_double(unsigned char *rec,int offset,int format_code) {
 	for(s=rec+offset,d=dconv.cc,i=0;
 			i<8;i++) *(d++)=*(s++);
 # endif     
-	return number2string(dconv.d,format_code);					
+	return number2string(dconv.d,format_code, buff, buff_sz);
 }
 
 /*
  * Formats integer value into static buffer
  */
-char *format_int(int value,int format_code) {
-	static char buffer[12];
-	sprintf(buffer,"%i",value);
-	return buffer;
-}	
+//char *format_int(int value,int format_code) {
+//	static char buffer[12];
+//	sprintf(buffer,"%i",value);
+//	return buffer;
+//}	
 /*
  * Formats RK record
  */
-char* format_rk(unsigned char *rec,short int format_code) {
+void format_rk(unsigned char *rec, short int format_code, char* buff, int buff_sz) {
 	double value=0.0;
 	int i;
 
@@ -866,7 +872,7 @@ char* format_rk(unsigned char *rec,short int format_code) {
 	}
 	if ( *(rec) & 0x01 ) 
 		value=value*0.01;
-	return number2string(value,format_code);
+	return number2string(value,format_code, buff, buff_sz);
 }
 
 

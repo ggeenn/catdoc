@@ -13,6 +13,7 @@ file(GLOB_RECURSE LIB_SOURCES
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${LIB_SOURCES})
 
 add_library(${PROJECT_NAME} STATIC ${LIB_SOURCES})
+set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER "parsing")
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC

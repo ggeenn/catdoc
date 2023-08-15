@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2) 
+cmake_minimum_required(VERSION 3.5) 
 
 project(catdoc DESCRIPTION "MS office old format parser (OLE file)")
 
